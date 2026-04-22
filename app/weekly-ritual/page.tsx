@@ -212,13 +212,13 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
 // STEP 2 — AI Emotion Translation
 // ═══════════════════════════════════════════════════════════════════
 function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
-  const { emotionDumps, setRefinedText, shareEmotionDump, partnerA, partnerB } = useMockStore((s) => ({
+  const { emotionDumps, setRefinedText, shareEmotionDump, partnerA, partnerB } = useMockStore(useShallow((s) => ({
     emotionDumps:    s.emotionDumps,
     setRefinedText:  s.setRefinedText,
     shareEmotionDump: s.shareEmotionDump,
     partnerA:        s.partnerA,
     partnerB:        s.partnerB,
-  }))
+  })))
   const [newRaw, setNewRaw]   = useState('')
   const [newPart, setNewPart] = useState<'A' | 'B'>('A')
   const addEmotionDump        = useMockStore((s) => s.addEmotionDump)
@@ -490,10 +490,10 @@ function ScoreSlider({ label, value, onChange }: { label: string; value: number;
 const DEFAULT_SCORES = { communication: 7, intimacy: 7, support: 7, fun: 7, effort: 7 }
 
 function Step3Scoring({ onNext }: { onNext: () => void }) {
-  const { scores, upsertScore, partnerA, partnerB } = useMockStore((s) => ({
+  const { scores, upsertScore, partnerA, partnerB } = useMockStore(useShallow((s) => ({
     scores: s.scores, upsertScore: s.upsertScore,
     partnerA: s.partnerA, partnerB: s.partnerB,
-  }))
+  })))
 
   const WEEK = 'W-current'
 
@@ -687,10 +687,10 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
 // STEP 4 — Wins Celebration
 // ═══════════════════════════════════════════════════════════════════
 function Step4Wins({ onFinish }: { onFinish: () => void }) {
-  const { wins, addWin, partnerA, partnerB, streak } = useMockStore((s) => ({
+  const { wins, addWin, partnerA, partnerB, streak } = useMockStore(useShallow((s) => ({
     wins: s.wins, addWin: s.addWin,
     partnerA: s.partnerA, partnerB: s.partnerB, streak: s.streak,
-  }))
+  })))
   const [text, setText]         = useState('')
   const [type, setType]         = useState<'relationship' | 'individual'>('relationship')
   const [partner, setPartner]   = useState<'A' | 'B'>('A')
@@ -959,10 +959,10 @@ const TOTAL_STEPS = 4
 
 export default function WeeklyRitualPage() {
   const router = useRouter()
-  const { partnerA, partnerB, activeWeeklyStep, setActiveWeeklyStep } = useMockStore((s) => ({
+  const { partnerA, partnerB, activeWeeklyStep, setActiveWeeklyStep } = useMockStore(useShallow((s) => ({
     partnerA: s.partnerA, partnerB: s.partnerB,
     activeWeeklyStep: s.activeWeeklyStep, setActiveWeeklyStep: s.setActiveWeeklyStep,
-  }))
+  })))
 
   const [step, setStep]       = useState(activeWeeklyStep)
   const [direction, setDir]   = useState(1)
