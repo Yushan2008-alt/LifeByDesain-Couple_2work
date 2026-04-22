@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMockStore, type MoodEmoji, type MoodTag, type TodoCategory } from '@/store/mockStore'
+import { useMockStore, type MoodEmoji, type MoodTag, type TodoCategory, type Journal } from '@/store/mockStore'
 import { useShallow } from 'zustand/shallow'
 import { today, CATEGORY_CONFIG, INTENSITY_LABELS, habitCompletionThisWeek } from '@/lib/utils'
 import {
   Flame, Plus, Trash2, CheckCircle2, Circle, CalendarCheck, Heart,
-  MessageCircle, ChevronRight, Sparkles, Tag,
+  MessageCircle, ChevronRight, Sparkles, Tag, BookOpen, Lock,
 } from 'lucide-react'
 
 // ── Spring variant ────────────────────────────────────────────────────────────
@@ -706,6 +706,152 @@ function EmotionDumpWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 7. PRIVATE JOURNAL
+// PRD: "Free-form text entry, tagged by date, Private by default, ga share
+//       kecuali user explicit mau." — private selamanya, tidak masuk weekly share.
+// ─────────────────────────────────────────────────────────────────────────────
+function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
+  const { addJournal, journals } = useMockStore(useShallow((s) => ({
+    addJournal: s.addJournal,
+    journals:   s.journals,
+  })))
+  const [text, setText]     = useState('')
+  const [saved, setSaved]   = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const myJournals = journals
+    .filter((j) => j.partner === activePartner)
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 3) // show last 3
+
+  function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!text.trim()) return
+    addJournal(text.trim(), activePartner)
+    setText('')
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: '0.75rem',
+          background: 'rgba(107,159,212,0.12)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <BookOpen size={16} color="#6B9FD4" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.0625rem', fontWeight: 600, color: '#2A1810' }}>
+              Jurnal Pribadi
+            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(107,159,212,0.1)', borderRadius: '2rem', padding: '0.125rem 0.5rem' }}>
+              <Lock size={9} color="#6B9FD4" />
+              <span style={{ fontSize: '0.65rem', color: '#6B9FD4', fontWeight: 600 }}>PRIVATE</span>
+            </div>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#8B6B61', lineHeight: 1.5, marginTop: '0.125rem' }}>
+            Catatan harianmu. Private selamanya — tidak pernah di-share ke pasangan.
+          </p>
+        </div>
+      </div>
+
+      {/* Recent journals preview */}
+      {myJournals.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              display: 'flex', alignItems: 'center', gap: '0.375rem',
+              fontSize: '0.75rem', color: '#8B6B61', fontWeight: 500,
+            }}
+          >
+            <span>📖 {myJournals.length} catatan terakhir</span>
+            <span style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▾</span>
+          </button>
+          <AnimatePresence>
+            {expanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+              >
+                {myJournals.map((j) => (
+                  <div
+                    key={j.id}
+                    style={{
+                      background: 'rgba(107,159,212,0.05)',
+                      border: '1px solid rgba(107,159,212,0.15)',
+                      borderRadius: '0.75rem', padding: '0.75rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.7rem', color: '#6B9FD4', marginBottom: '0.25rem', fontWeight: 500 }}>{j.date}</div>
+                    <p style={{ fontSize: '0.8125rem', color: '#5A3E37', lineHeight: 1.6, margin: 0 }}>
+                      {j.text.length > 120 ? j.text.slice(0, 120) + '…' : j.text}
+                    </p>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Entry form */}
+      <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <textarea
+          className="input-warm"
+          placeholder="Tulis apapun yang ada di pikiranmu hari ini... (tidak akan pernah dibagikan)"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={3}
+          style={{ resize: 'none' }}
+        />
+        <AnimatePresence mode="wait">
+          {!saved ? (
+            <motion.button
+              key="save"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              type="submit"
+              disabled={!text.trim()}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                background: 'rgba(107,159,212,0.12)',
+                border: '1.5px solid rgba(107,159,212,0.3)',
+                borderRadius: '0.75rem', padding: '0.625rem',
+                color: '#4A7FAA', fontWeight: 600, fontSize: '0.875rem',
+                cursor: text.trim() ? 'pointer' : 'not-allowed', opacity: text.trim() ? 1 : 0.6,
+              }}
+            >
+              <Lock size={13} /> Simpan (Private)
+            </motion.button>
+          ) : (
+            <motion.div
+              key="done"
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+              style={{
+                background: 'rgba(107,159,212,0.1)',
+                border: '1px solid rgba(107,159,212,0.25)',
+                borderRadius: '0.875rem', padding: '0.75rem',
+                textAlign: 'center', color: '#4A7FAA', fontWeight: 600, fontSize: '0.875rem',
+              }}
+            >
+              📔 Tersimpan — hanya kamu yang bisa baca ini
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </form>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
@@ -820,11 +966,16 @@ export default function DashboardPage() {
           <EmotionDumpWidget activePartner={activePartner} />
         </motion.div>
 
+        {/* — Private journal ───────────────────────────────────── */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.3 }}>
+          <PrivateJournalWidget activePartner={activePartner} />
+        </motion.div>
+
         {/* — CTA to Weekly Ritual ──────────────────────────────── */}
         <motion.button
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ ...SPRING, delay: 0.3 }}
+          transition={{ ...SPRING, delay: 0.35 }}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => router.push('/weekly-ritual')}
