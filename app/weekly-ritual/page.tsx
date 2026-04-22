@@ -8,7 +8,6 @@ import {
   Radar, ResponsiveContainer, Legend, Tooltip,
 } from 'recharts'
 import { useMockStore, simulateAIRefine } from '@/store/mockStore'
-import { useShallow } from 'zustand/shallow'
 import { today, DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek, type Dimension } from '@/lib/utils'
 import {
   Sparkles, Wand2, Share2, CheckCircle2, Trophy, Heart, ArrowRight,
@@ -46,14 +45,12 @@ function StepDots({ current, total }: { current: number; total: number }) {
 // STEP 1 — Weekly Overview (Daily Feed → Weekly Review)
 // ═══════════════════════════════════════════════════════════════════
 function Step1Overview({ onNext }: { onNext: () => void }) {
-  const { moodHistory, habits, emotionDumps, streak, partnerA, partnerB } = useMockStore(useShallow((s) => ({
-    moodHistory:   s.moodHistory,
-    habits:        s.habits,
-    emotionDumps:  s.emotionDumps,
-    streak:        s.streak,
-    partnerA:      s.partnerA,
-    partnerB:      s.partnerB,
-  })))
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const habits = useMockStore((s) => s.habits)
+  const emotionDumps = useMockStore((s) => s.emotionDumps)
+  const streak = useMockStore((s) => s.streak)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
 
   // Build 7-day window
   const weekDates: string[] = []
@@ -212,13 +209,11 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
 // STEP 2 — AI Emotion Translation
 // ═══════════════════════════════════════════════════════════════════
 function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
-  const { emotionDumps, setRefinedText, shareEmotionDump, partnerA, partnerB } = useMockStore(useShallow((s) => ({
-    emotionDumps:    s.emotionDumps,
-    setRefinedText:  s.setRefinedText,
-    shareEmotionDump: s.shareEmotionDump,
-    partnerA:        s.partnerA,
-    partnerB:        s.partnerB,
-  })))
+  const emotionDumps = useMockStore((s) => s.emotionDumps)
+  const setRefinedText = useMockStore((s) => s.setRefinedText)
+  const shareEmotionDump = useMockStore((s) => s.shareEmotionDump)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
   const [newRaw, setNewRaw]   = useState('')
   const [newPart, setNewPart] = useState<'A' | 'B'>('A')
   const addEmotionDump        = useMockStore((s) => s.addEmotionDump)
@@ -490,10 +485,10 @@ function ScoreSlider({ label, value, onChange }: { label: string; value: number;
 const DEFAULT_SCORES = { communication: 7, intimacy: 7, support: 7, fun: 7, effort: 7 }
 
 function Step3Scoring({ onNext }: { onNext: () => void }) {
-  const { scores, upsertScore, partnerA, partnerB } = useMockStore(useShallow((s) => ({
-    scores: s.scores, upsertScore: s.upsertScore,
-    partnerA: s.partnerA, partnerB: s.partnerB,
-  })))
+  const scores = useMockStore((s) => s.scores)
+  const upsertScore = useMockStore((s) => s.upsertScore)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
 
   const WEEK = 'W-current'
 
@@ -687,10 +682,11 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
 // STEP 4 — Wins Celebration
 // ═══════════════════════════════════════════════════════════════════
 function Step4Wins({ onFinish }: { onFinish: () => void }) {
-  const { wins, addWin, partnerA, partnerB, streak } = useMockStore(useShallow((s) => ({
-    wins: s.wins, addWin: s.addWin,
-    partnerA: s.partnerA, partnerB: s.partnerB, streak: s.streak,
-  })))
+  const wins = useMockStore((s) => s.wins)
+  const addWin = useMockStore((s) => s.addWin)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
+  const streak = useMockStore((s) => s.streak)
   const [text, setText]         = useState('')
   const [type, setType]         = useState<'relationship' | 'individual'>('relationship')
   const [partner, setPartner]   = useState<'A' | 'B'>('A')
@@ -959,10 +955,10 @@ const TOTAL_STEPS = 4
 
 export default function WeeklyRitualPage() {
   const router = useRouter()
-  const { partnerA, partnerB, activeWeeklyStep, setActiveWeeklyStep } = useMockStore(useShallow((s) => ({
-    partnerA: s.partnerA, partnerB: s.partnerB,
-    activeWeeklyStep: s.activeWeeklyStep, setActiveWeeklyStep: s.setActiveWeeklyStep,
-  })))
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
+  const activeWeeklyStep = useMockStore((s) => s.activeWeeklyStep)
+  const setActiveWeeklyStep = useMockStore((s) => s.setActiveWeeklyStep)
 
   const [step, setStep]       = useState(activeWeeklyStep)
   const [direction, setDir]   = useState(1)
