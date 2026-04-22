@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMockStore } from '@/store/mockStore'
-import { useShallow } from 'zustand/shallow'
 import { Copy, Check, Heart, Link2, Sparkles, ArrowRight } from 'lucide-react'
 
 // ── Framer Motion variants ────────────────────────────────────────────────────
@@ -126,7 +125,8 @@ function Step1PartnerA({ onNext }: { onNext: () => void }) {
 // STEP 2 — Invite Token
 // ============================================================
 function Step2Invite({ onNext }: { onNext: () => void }) {
-  const { inviteToken, partnerA } = useMockStore(useShallow((s) => ({ inviteToken: s.inviteToken, partnerA: s.partnerA })))
+  const inviteToken = useMockStore((s) => s.inviteToken)
+  const partnerA = useMockStore((s) => s.partnerA)
   const [copied, setCopied] = useState(false)
 
   const inviteLink = `https://lifebydesign.app/join?token=${inviteToken}`
@@ -250,11 +250,9 @@ function Step2Invite({ onNext }: { onNext: () => void }) {
 // STEP 3 — Simulate Partner B Joining
 // ============================================================
 function Step3PartnerB({ onNext }: { onNext: () => void }) {
-  const { joinAsPartnerB, inviteToken, partnerA } = useMockStore(useShallow((s) => ({
-    joinAsPartnerB: s.joinAsPartnerB,
-    inviteToken: s.inviteToken,
-    partnerA: s.partnerA,
-  })))
+  const joinAsPartnerB = useMockStore((s) => s.joinAsPartnerB)
+  const inviteToken = useMockStore((s) => s.inviteToken)
+  const partnerA = useMockStore((s) => s.partnerA)
   const [name, setName] = useState('')
   const [token, setToken] = useState('')
   const [error, setError] = useState('')
@@ -362,11 +360,9 @@ function Step3PartnerB({ onNext }: { onNext: () => void }) {
 // STEP 4 — Connected! 🎉
 // ============================================================
 function Step4Connected({ onFinish }: { onFinish: () => void }) {
-  const { partnerA, partnerB, streak } = useMockStore(useShallow((s) => ({
-    partnerA: s.partnerA,
-    partnerB: s.partnerB,
-    streak: s.streak,
-  })))
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
+  const streak = useMockStore((s) => s.streak)
 
   return (
     <div style={{ textAlign: 'center' }}>
@@ -502,7 +498,8 @@ const STEPS = 4
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { partnerA, partnerB } = useMockStore(useShallow((s) => ({ partnerA: s.partnerA, partnerB: s.partnerB })))
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState(1)
 
