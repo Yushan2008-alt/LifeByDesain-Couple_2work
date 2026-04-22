@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx create-next-app@latest lifebydesign-couple --typescript --tailwind --app --no-git --import-alias \"@/*\" --yes)",
+      "Bash(npm install *)",
+      "Bash(mkdir -p \"/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/store\")",
+      "Bash(mkdir -p \"/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/lib\")",
+      "Bash(mkdir -p \"/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/components/layout\")",
+      "Bash(mkdir -p \"/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/app/onboarding\")",
+      "Bash(mkdir -p \"/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/app/dashboard\")",
+      "Bash(mkdir -p \"/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/app/weekly-ritual\")",
+      "Bash(npm run *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(taskkill /PID 14100 /F)",
+      "PowerShell(Stop-Process -Id 14100 -Force)",
+      "Bash(node -e \"require\\('/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/node_modules/zustand/react/shallow'\\); console.log\\('OK'\\)\")",
+      "Bash(node -e \"const z = require\\('/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/node_modules/zustand/shallow.js'\\); console.log\\(Object.keys\\(z\\)\\)\")"
+    ]
+  }
+}

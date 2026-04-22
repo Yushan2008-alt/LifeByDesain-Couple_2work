@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lifebydesign-couple (dev)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "lifebydesign-couple"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "lifebydesign-couple (production preview)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start", "--prefix", "lifebydesign-couple", "--", "-p", "3001"],
+      "port": 3001
+    }
+  ]
+}
