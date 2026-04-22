@@ -1,22 +1,8 @@
 import type { Metadata, Viewport } from 'next'
-import { Playfair_Display, DM_Sans } from 'next/font/google'
 import './globals.css'
 import Nav             from '@/components/layout/Nav'
 import Footer          from '@/components/layout/Footer'
 import StoreHydration  from '@/components/StoreHydration'
-
-// ── Fonts ─────────────────────────────────────────────────
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  display: 'swap',
-})
-
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  variable: '--font-dm-sans',
-  display: 'swap',
-})
 
 // ── Metadata ──────────────────────────────────────────────
 export const metadata: Metadata = {
@@ -34,7 +20,7 @@ export const viewport: Viewport = {
 // ── Root Layout ────────────────────────────────────────────
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`${playfair.variable} ${dmSans.variable}`}>
+    <html lang="id">
       <body
         style={{
           minHeight: '100dvh',

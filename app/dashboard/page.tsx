@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMockStore, type MoodEmoji, type MoodTag, type TodoCategory, type Journal } from '@/store/mockStore'
+import { useMockStore, type MoodEmoji, type MoodTag, type TodoCategory } from '@/store/mockStore'
 import { useShallow } from 'zustand/shallow'
 import { today, CATEGORY_CONFIG, INTENSITY_LABELS, habitCompletionThisWeek } from '@/lib/utils'
 import {
@@ -18,9 +18,9 @@ const SPRING = { type: 'spring', stiffness: 280, damping: 26 } as const
 // 1. STREAK BADGE
 // ─────────────────────────────────────────────────────────────────────────────
 function StreakBadge() {
-  const { streak, partnerA, partnerB } = useMockStore(useShallow((s) => ({
-    streak: s.streak, partnerA: s.partnerA, partnerB: s.partnerB,
-  })))
+  const streak = useMockStore((s) => s.streak)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
 
   return (
     <motion.div
@@ -100,10 +100,10 @@ const TAG_LABELS: Record<MoodTag, string> = {
 }
 
 function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
-  const { moodHistory, addMoodEntry, partnerA, partnerB } = useMockStore(useShallow((s) => ({
-    moodHistory: s.moodHistory, addMoodEntry: s.addMoodEntry,
-    partnerA: s.partnerA, partnerB: s.partnerB,
-  })))
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const addMoodEntry = useMockStore((s) => s.addMoodEntry)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
   const [selected, setSelected] = useState<MoodEmoji | null>(null)
   const [intensity, setIntensity] = useState(3)
   const [tags, setTags] = useState<MoodTag[]>([])
@@ -286,7 +286,8 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
 // 3. HABIT CHECKLIST
 // ─────────────────────────────────────────────────────────────────────────────
 function HabitChecklist({ activePartner }: { activePartner: 'A' | 'B' }) {
-  const { habits, toggleHabit } = useMockStore(useShallow((s) => ({ habits: s.habits, toggleHabit: s.toggleHabit })))
+  const habits = useMockStore((s) => s.habits)
+  const toggleHabit = useMockStore((s) => s.toggleHabit)
   const myHabits = habits.filter((h) => h.partner === activePartner)
   const todayStr = today()
 
@@ -369,9 +370,10 @@ const CATEGORY_LABELS: Record<TodoCategory, string> = {
 }
 
 function SharedTodoList({ activePartner }: { activePartner: 'A' | 'B' }) {
-  const { todos, addTodo, toggleTodo, deleteTodo } = useMockStore(useShallow((s) => ({
-    todos: s.todos, addTodo: s.addTodo, toggleTodo: s.toggleTodo, deleteTodo: s.deleteTodo,
-  })))
+  const todos = useMockStore((s) => s.todos)
+  const addTodo = useMockStore((s) => s.addTodo)
+  const toggleTodo = useMockStore((s) => s.toggleTodo)
+  const deleteTodo = useMockStore((s) => s.deleteTodo)
   const [text, setText] = useState('')
   const [category, setCategory] = useState<TodoCategory>('home')
   const [showForm, setShowForm] = useState(false)
@@ -544,10 +546,10 @@ function SharedTodoList({ activePartner }: { activePartner: 'A' | 'B' }) {
 // 5. PARTNER STATUS
 // ─────────────────────────────────────────────────────────────────────────────
 function PartnerStatus({ activePartner }: { activePartner: 'A' | 'B' }) {
-  const { partnerA, partnerB, moodHistory, habits } = useMockStore(useShallow((s) => ({
-    partnerA: s.partnerA, partnerB: s.partnerB,
-    moodHistory: s.moodHistory, habits: s.habits,
-  })))
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const habits = useMockStore((s) => s.habits)
 
   const partnerRole   = activePartner === 'A' ? 'B' : 'A'
   const partnerName   = (partnerRole === 'A' ? partnerA : partnerB).name
@@ -608,9 +610,8 @@ function PartnerStatus({ activePartner }: { activePartner: 'A' | 'B' }) {
 // 6. EMOTION DUMP
 // ─────────────────────────────────────────────────────────────────────────────
 function EmotionDumpWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
-  const { addEmotionDump, emotionDumps } = useMockStore(useShallow((s) => ({
-    addEmotionDump: s.addEmotionDump, emotionDumps: s.emotionDumps,
-  })))
+  const addEmotionDump = useMockStore((s) => s.addEmotionDump)
+  const emotionDumps = useMockStore((s) => s.emotionDumps)
   const [text, setText] = useState('')
   const [saved, setSaved] = useState(false)
 
@@ -856,7 +857,8 @@ function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter()
-  const { partnerA, partnerB } = useMockStore(useShallow((s) => ({ partnerA: s.partnerA, partnerB: s.partnerB })))
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
   const [activePartner, setActivePartner] = useState<'A' | 'B'>('A')
 
   // Redirect if not paired

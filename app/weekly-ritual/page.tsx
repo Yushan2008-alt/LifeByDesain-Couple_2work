@@ -7,12 +7,9 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis,
   Radar, ResponsiveContainer, Legend, Tooltip,
 } from 'recharts'
-import {
-  useMockStore, simulateAIRefine, generateSelfSuggestion,
-  type Commitment,
-} from '@/store/mockStore'
+import { useMockStore, simulateAIRefine, generateSelfSuggestion, type Commitment } from '@/store/mockStore'
 import { useShallow } from 'zustand/shallow'
-import { today, DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek, type Dimension } from '@/lib/utils'
+import { today, DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek } from '@/lib/utils'
 import {
   Sparkles, Wand2, Share2, CheckCircle2, Trophy, Heart, ArrowRight,
   ChevronLeft, TrendingUp, Star, Plus, Lightbulb, Target, Check, X,
