@@ -29,8 +29,20 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy ke Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Project ini sudah siap deploy ke Vercel dengan konfigurasi:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `vercel.json` (framework Next.js, install dan build command)
+- Build command: `npm run build`
+- Install command: `npm ci`
+
+Langkah deploy:
+
+1. Push branch ini ke GitHub.
+2. Buka Vercel lalu pilih **Add New Project**.
+3. Import repository ini.
+4. Framework akan terdeteksi sebagai **Next.js**.
+5. Klik **Deploy**.
+
+Untuk redeploy berikutnya, cukup push commit baru ke branch yang terhubung.
