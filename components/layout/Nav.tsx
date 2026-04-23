@@ -3,24 +3,31 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMockStore } from '@/store/mockStore'
-import { Home, CalendarCheck, Flame, BarChart2, Crown } from 'lucide-react'
+import { Home, CalendarCheck, Flame, CreditCard } from 'lucide-react'
+import { isPartnerActiveToday, streakRiskStatus, today } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/dashboard',     label: 'Daily',   icon: Home },
-  { href: '/weekly-ritual', label: 'Weekly',  icon: CalendarCheck },
-  { href: '/recap',         label: 'Recap',   icon: BarChart2 },
+  { href: '/dashboard',     label: 'Daily',  icon: Home },
+  { href: '/weekly-ritual', label: 'Weekly', icon: CalendarCheck },
+  { href: '/pricing', label: 'Pricing', icon: CreditCard },
 ]
 
 export default function Nav() {
   const pathname = usePathname()
   // Separate selectors — never return new objects (causes infinite re-render loop)
-  const partnerA  = useMockStore((s) => s.partnerA)
-  const partnerB  = useMockStore((s) => s.partnerB)
-  const streak    = useMockStore((s) => s.streak)
-  const isPremium = useMockStore((s) => s.isPremium)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
+  const streak   = useMockStore((s) => s.streak)
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const habits = useMockStore((s) => s.habits)
 
   const bothJoined = partnerA.joined && partnerB.joined
   if (!bothJoined || pathname === '/onboarding') return null
+
+  const todayDate = today()
+  const activeA = isPartnerActiveToday({ partner: 'A', todayDate, moodHistory, habits })
+  const activeB = isPartnerActiveToday({ partner: 'B', todayDate, moodHistory, habits })
+  const risk = streakRiskStatus({ todayDate, moodHistory, habits })
 
   return (
     <header
@@ -82,27 +89,8 @@ export default function Nav() {
         })}
       </nav>
 
-      {/* Right side pills */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        {/* Premium badge */}
-        {isPremium && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              background: 'linear-gradient(135deg,#FFF5E8,#FFE5C0)',
-              border: '1px solid rgba(184,149,106,0.35)',
-              borderRadius: '2rem',
-              padding: '0.3125rem 0.75rem',
-            }}
-          >
-            <Crown size={12} color="#B8956A" fill="#B8956A" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#B8956A' }}>Premium</span>
-          </div>
-        )}
-
-        {/* Streak pill */}
+      {/* Streak + partner activity */}
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
         <div
           style={{
             display: 'flex',
@@ -117,6 +105,27 @@ export default function Nav() {
           <Flame size={13} color="#E8846A" />
           <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#E8846A' }}>{streak}</span>
           <span style={{ fontSize: '0.75rem', color: '#C4A090', fontWeight: 400 }}>days</span>
+          {risk === 'at-risk' && (
+            <span style={{ fontSize: '0.7rem', color: '#C07070', fontWeight: 700 }}>• at risk</span>
+          )}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            padding: '0.28rem 0.55rem',
+            borderRadius: '999px',
+            border: '1px solid rgba(123,174,127,0.28)',
+            background: 'rgba(123,174,127,0.1)',
+            fontSize: '0.7rem',
+            color: '#3D7A43',
+            fontWeight: 600,
+          }}
+          title="Status aktivitas hari ini"
+        >
+          <span>{activeA ? 'A✓' : 'A•'}</span>
+          <span>{activeB ? 'B✓' : 'B•'}</span>
         </div>
       </div>
     </header>

@@ -2,13 +2,12 @@
 
 import { useMockStore } from '@/store/mockStore'
 import { useRouter } from 'next/navigation'
-import { RotateCcw, Crown } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Footer() {
-  const reset      = useMockStore((s) => s.reset)
-  const isPremium  = useMockStore((s) => s.isPremium)
-  const setPremium = useMockStore((s) => s.setPremium)
-  const router     = useRouter()
+  const reset  = useMockStore((s) => s.reset)
+  const router = useRouter()
 
   function handleReset() {
     if (confirm('Reset semua dummy data? Proses ini akan mengembalikan app ke state awal untuk testing ulang.')) {
@@ -34,35 +33,25 @@ export default function Footer() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <span style={{ fontSize: '1rem' }}>🌸</span>
         <span style={{ fontSize: '0.8rem', color: '#C4A090', fontFamily: 'var(--font-dm-sans)' }}>
-          LifebyDesign Couple — MVP Demo
+          LifebyDesign Couple — intentional relationship growth
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {/* Premium demo toggle */}
-        <button
-          onClick={() => setPremium(!isPremium)}
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <Link
+          href="/privacy"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.375rem',
-            background: isPremium ? 'rgba(184,149,106,0.12)' : 'rgba(237,213,200,0.4)',
-            color: isPremium ? '#B8956A' : '#8B6B61',
-            border: isPremium ? '1px solid rgba(184,149,106,0.4)' : '1px solid rgba(237,213,200,0.8)',
+            fontSize: '0.78rem',
+            color: '#8B6B61',
+            textDecoration: 'none',
+            border: '1px solid rgba(237,213,200,0.8)',
             borderRadius: '0.625rem',
-            padding: '0.5rem 1rem',
-            fontSize: '0.8125rem',
-            fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            fontFamily: 'var(--font-dm-sans)',
+            padding: '0.4rem 0.75rem',
+            background: 'rgba(255,255,255,0.7)',
           }}
         >
-          <Crown size={12} />
-          {isPremium ? 'Nonaktifkan Premium' : 'Demo Premium'}
-        </button>
-
-        {/* Reset */}
+          Privacy & Data Use
+        </Link>
         <button
           onClick={handleReset}
           style={{
@@ -92,7 +81,7 @@ export default function Footer() {
           }}
         >
           <RotateCcw size={13} />
-          Reset Data
+          Reset Dummy Data
         </button>
       </div>
     </footer>

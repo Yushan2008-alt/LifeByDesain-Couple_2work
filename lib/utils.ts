@@ -72,3 +72,36 @@ export function habitCompletionThisWeek(completedDays: string[]): number {
   const done = weekDates.filter((date) => completedDays.includes(date)).length
   return Math.round((done / 7) * 100)
 }
+
+export function weeklyDates() {
+  const d = new Date()
+  const dates: string[] = []
+  for (let i = 6; i >= 0; i--) {
+    const day = new Date(d)
+    day.setDate(d.getDate() - i)
+    dates.push(day.toISOString().split('T')[0])
+  }
+  return dates
+}
+
+export function isPartnerActiveToday(args: {
+  partner: 'A' | 'B'
+  todayDate: string
+  moodHistory: { date: string; partner: 'A' | 'B' }[]
+  habits: { partner: 'A' | 'B'; completedDays: string[] }[]
+}) {
+  const hasMood = args.moodHistory.some((m) => m.partner === args.partner && m.date === args.todayDate)
+  const hasHabit = args.habits.some((h) => h.partner === args.partner && h.completedDays.includes(args.todayDate))
+  return hasMood || hasHabit
+}
+
+export function streakRiskStatus(args: {
+  todayDate: string
+  moodHistory: { date: string; partner: 'A' | 'B' }[]
+  habits: { partner: 'A' | 'B'; completedDays: string[] }[]
+}) {
+  const activeA = isPartnerActiveToday({ partner: 'A', todayDate: args.todayDate, moodHistory: args.moodHistory, habits: args.habits })
+  const activeB = isPartnerActiveToday({ partner: 'B', todayDate: args.todayDate, moodHistory: args.moodHistory, habits: args.habits })
+  if (activeA && activeB) return 'safe' as const
+  return 'at-risk' as const
+}

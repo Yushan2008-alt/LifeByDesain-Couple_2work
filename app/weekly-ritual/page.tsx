@@ -7,19 +7,18 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis,
   Radar, ResponsiveContainer, Legend, Tooltip,
 } from 'recharts'
-import { useMockStore, simulateAIRefine, generateSelfSuggestion, type Commitment } from '@/store/mockStore'
-import { useShallow } from 'zustand/shallow'
-import { today, DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek } from '@/lib/utils'
+import { useMockStore, simulateAIRefine } from '@/store/mockStore'
+import { today, DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek, type Dimension } from '@/lib/utils'
+import { useAnalytics } from '@/lib/analytics'
+import TemplateLibrarySheet from '@/components/modals/TemplateLibrarySheet'
 import {
   Sparkles, Wand2, Share2, CheckCircle2, Trophy, Heart, ArrowRight,
-  ChevronLeft, TrendingUp, Star, Plus, Lightbulb, Target, Check, X,
-  Users, User, Lock, Crown,
+  ChevronLeft, TrendingUp, Star, Plus, BookOpen,
 } from 'lucide-react'
 
-// ── Shared spring ─────────────────────────────────────────────────────────────
+// ── Shared ──────────────────────────────────────────────────────────────────
 const SPRING = { type: 'spring', stiffness: 280, damping: 26 } as const
 
-// ── Step indicator dots ───────────────────────────────────────────────────────
 function StepDots({ current, total }: { current: number; total: number }) {
   const labels = ['Overview', 'Emosi', '360°', 'Wins']
   return (
@@ -44,23 +43,18 @@ function StepDots({ current, total }: { current: number; total: number }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STEP 1 — Weekly Overview + Review Komitmen + AI Self-Suggestion
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// STEP 1 — Weekly Overview (Daily Feed → Weekly Review)
+// ═══════════════════════════════════════════════════════════════════
 function Step1Overview({ onNext }: { onNext: () => void }) {
-  const { moodHistory, habits, emotionDumps, streak, partnerA, partnerB, commitments, toggleCommitment } =
-    useMockStore(useShallow((s) => ({
-      moodHistory:       s.moodHistory,
-      habits:            s.habits,
-      emotionDumps:      s.emotionDumps,
-      streak:            s.streak,
-      partnerA:          s.partnerA,
-      partnerB:          s.partnerB,
-      commitments:       s.commitments,
-      toggleCommitment:  s.toggleCommitment,
-    })))
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const habits = useMockStore((s) => s.habits)
+  const emotionDumps = useMockStore((s) => s.emotionDumps)
+  const streak = useMockStore((s) => s.streak)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
 
-  // 7-day window
+  // Build 7-day window
   const weekDates: string[] = []
   for (let i = 6; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i)
@@ -68,10 +62,9 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
   }
   const DAY_SHORT = ['M', 'S', 'S', 'R', 'K', 'J', 'S']
 
+  // Per-partner mood this week
   function weekMoods(partner: 'A' | 'B') {
-    return weekDates.map((date) =>
-      moodHistory.filter((m) => m.date === date && m.partner === partner).at(-1)
-    )
+    return weekDates.map((date) => moodHistory.filter((m) => m.date === date && m.partner === partner).at(-1))
   }
   const moodsA = weekMoods('A')
   const moodsB = weekMoods('B')
@@ -79,69 +72,66 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
   // Habit completion
   const habitsA = habits.filter((h) => h.partner === 'A')
   const habitsB = habits.filter((h) => h.partner === 'B')
-  const avgA = habitsA.length ? Math.round(habitsA.reduce((s, h) => s + habitCompletionThisWeek(h.completedDays), 0) / habitsA.length) : 0
-  const avgB = habitsB.length ? Math.round(habitsB.reduce((s, h) => s + habitCompletionThisWeek(h.completedDays), 0) / habitsB.length) : 0
+  const avgA    = habitsA.length ? Math.round(habitsA.reduce((s, h) => s + habitCompletionThisWeek(h.completedDays), 0) / habitsA.length) : 0
+  const avgB    = habitsB.length ? Math.round(habitsB.reduce((s, h) => s + habitCompletionThisWeek(h.completedDays), 0) / habitsB.length) : 0
 
   // Pending emotion dumps
   const pendingDumps = emotionDumps.filter((e) => !e.shared && !e.refinedText)
+  const [openTemplates, setOpenTemplates] = useState(false)
 
-  // Commitments dari minggu lalu
-  const prevCommitments = commitments.filter((c) => c.week === 'W-prev')
-  const donePrev  = prevCommitments.filter((c) => c.done).length
-  const totalPrev = prevCommitments.length
-
-  // AI Self-Suggestion
-  const suggestionA = generateSelfSuggestion(moodHistory, 'A')
-  const suggestionB = generateSelfSuggestion(moodHistory, 'B')
-
-  const [showSuggestionA, setShowSuggestionA] = useState(false)
-  const [showSuggestionB, setShowSuggestionB] = useState(false)
-
-  useEffect(() => {
-    if (suggestionA) setTimeout(() => setShowSuggestionA(true), 600)
-    if (suggestionB) setTimeout(() => setShowSuggestionB(true), 900)
-  }, [])
-
-  function getName(p: 'A' | 'B') {
-    return (p === 'A' ? partnerA.name : partnerB.name) || `Partner ${p}`
-  }
+  const weekMoodEntries = moodHistory.filter((m) => weekDates.includes(m.date))
+  const avgMood = weekMoodEntries.length
+    ? Math.round((weekMoodEntries.reduce((sum, m) => sum + m.intensity, 0) / weekMoodEntries.length) * 10) / 10
+    : 0
+  const lowMoodCount = weekMoodEntries.filter((m) => m.intensity <= 2).length
+  const avgHabit = Math.round((avgA + avgB) / 2)
+  const weeklyInsight = lowMoodCount >= 3
+    ? 'Minggu ini ada pola energi menurun di beberapa hari. Coba jadwalkan micro-check-in 10 menit di tengah minggu.'
+    : avgHabit >= 65
+      ? 'Konsistensi habit kalian tinggi. Ini momentum bagus untuk lanjut ke ritual quality time mingguan.'
+      : 'Konsistensi habit masih bisa ditingkatkan. Fokus satu kebiasaan inti berdua minggu depan.'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div>
         <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.5rem', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
-          Review Minggu Ini 📅
+          Minggu ini 📅
         </h2>
-        <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
-          Data harianmu minggu ini + review komitmen yang kalian buat sebelumnya.
+        <p style={{ fontSize: '0.875rem', color: '#8B6B61' }}>
+          Review data daily kalian sebelum mulai ritual mingguan.
         </p>
       </div>
 
-      {/* ── Streak recap ─────────────────────────────────── */}
-      <div style={{
-        background: 'linear-gradient(135deg,rgba(232,132,106,0.1),rgba(244,160,160,0.08))',
-        border: '1px solid rgba(232,132,106,0.2)',
-        borderRadius: '1rem', padding: '1rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      {/* Streak recap */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg,rgba(232,132,106,0.1),rgba(244,160,160,0.08))',
+          border: '1px solid rgba(232,132,106,0.2)',
+          borderRadius: '1rem', padding: '1rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}
+      >
         <div>
           <div style={{ fontSize: '0.75rem', color: '#C4A090', marginBottom: '0.125rem' }}>Streak Bersama</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
             <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '2rem', fontWeight: 700, color: '#E8846A' }}>{streak}</span>
-            <span style={{ fontSize: '0.8rem', color: '#C4A090' }}>hari (buffer 1 hari aktif)</span>
+            <span style={{ fontSize: '0.8rem', color: '#C4A090' }}>hari</span>
           </div>
         </div>
         <span style={{ fontSize: '2.5rem' }}>🔥</span>
       </div>
 
-      {/* ── Mood sparklines — kedua partner ──────────────── */}
+      {/* Mood sparklines — both partners */}
       <div className="card" style={{ padding: '1.25rem', gap: '1rem', display: 'flex', flexDirection: 'column' }}>
         <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <TrendingUp size={14} color="#E8846A" /> Mood Minggu Ini
         </h4>
-        {([['A', getName('A'), '#E8846A', moodsA], ['B', getName('B'), '#7BAE7F', moodsB]] as const).map(([p, name, color, moods]) => (
+
+        {([['A', partnerA.name, '#E8846A', moodsA], ['B', partnerB.name, '#7BAE7F', moodsB]] as const).map(([p, name, color, moods]) => (
           <div key={p}>
-            <div style={{ fontSize: '0.75rem', color: '#8B6B61', marginBottom: '0.375rem', fontWeight: 600 }}>{name}</div>
+            <div style={{ fontSize: '0.75rem', color: '#8B6B61', marginBottom: '0.375rem', fontWeight: 600 }}>
+              {name || `Partner ${p}`}
+            </div>
             <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-end' }}>
               {(moods as (typeof moodsA[0])[]).map((entry, i) => {
                 const h = entry ? (entry.intensity / 5) * 32 + 6 : 6
@@ -168,16 +158,16 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
         ))}
       </div>
 
-      {/* ── Habit completion ─────────────────────────────── */}
+      {/* Habit completion */}
       <div className="card" style={{ padding: '1.25rem' }}>
         <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <CheckCircle2 size={14} color="#7BAE7F" /> Habit Completion Minggu Ini
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-          {([['A', getName('A'), '#E8846A', avgA], ['B', getName('B'), '#7BAE7F', avgB]] as const).map(([p, name, color, pct]) => (
+          {([['A', partnerA.name, '#E8846A', avgA], ['B', partnerB.name, '#7BAE7F', avgB]] as const).map(([p, name, color, pct]) => (
             <div key={p}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', marginBottom: '0.25rem' }}>
-                <span style={{ color: '#5A3E37', fontWeight: 500 }}>{name}</span>
+                <span style={{ color: '#5A3E37', fontWeight: 500 }}>{name || `Partner ${p}`}</span>
                 <span style={{ color, fontWeight: 700 }}>{pct}%</span>
               </div>
               <div style={{ height: 8, background: '#EDD5C8', borderRadius: 4, overflow: 'hidden' }}>
@@ -192,7 +182,7 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
         </div>
       </div>
 
-      {/* ── Pending emotion dumps notice ─────────────────── */}
+      {/* Pending emotion dumps notice */}
       {pendingDumps.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -200,14 +190,15 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
           style={{
             background: 'rgba(244,160,160,0.10)',
             border: '1px solid rgba(244,160,160,0.25)',
-            borderRadius: '1rem', padding: '0.875rem 1rem',
+            borderRadius: '1rem',
+            padding: '0.875rem 1rem',
             display: 'flex', alignItems: 'center', gap: '0.75rem',
           }}
         >
           <span style={{ fontSize: '1.25rem' }}>💌</span>
           <div>
             <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#C07070' }}>
-              {pendingDumps.length} emotion dump menunggu di-refine
+              {pendingDumps.length} emotion dump menunggu
             </div>
             <div style={{ fontSize: '0.75rem', color: '#8B6B61' }}>
               AI akan bantu haluskan di step berikutnya
@@ -216,138 +207,19 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
         </motion.div>
       )}
 
-      {/* ── Review Komitmen Minggu Lalu ───────────────────── */}
-      {prevCommitments.length > 0 && (
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-              <Target size={14} color="#E8846A" /> Review Komitmen Lalu
-            </h4>
-            <span style={{
-              fontSize: '0.75rem', fontWeight: 700,
-              color: donePrev === totalPrev ? '#3D7A43' : '#C4A090',
-              background: donePrev === totalPrev ? 'rgba(123,174,127,0.12)' : 'rgba(237,213,200,0.5)',
-              borderRadius: '2rem', padding: '0.2rem 0.625rem',
-            }}>
-              {donePrev}/{totalPrev} done
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {prevCommitments.map((c) => (
-              <motion.button
-                key={c.id}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => toggleCommitment(c.id)}
-                style={{
-                  display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
-                  background: c.done ? 'rgba(123,174,127,0.08)' : '#FFF8F5',
-                  border: `1.5px solid ${c.done ? 'rgba(123,174,127,0.25)' : '#EDD5C8'}`,
-                  borderRadius: '0.875rem', padding: '0.75rem 1rem',
-                  cursor: 'pointer', textAlign: 'left',
-                }}
-              >
-                <motion.div
-                  animate={{ scale: c.done ? 1 : 0.9 }}
-                  style={{ marginTop: 1, flexShrink: 0 }}
-                >
-                  {c.done
-                    ? <CheckCircle2 size={16} color="#7BAE7F" />
-                    : <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid #C4A090' }} />
-                  }
-                </motion.div>
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    fontSize: '0.8125rem', fontWeight: 500,
-                    color: c.done ? '#8B6B61' : '#2A1810',
-                    textDecoration: c.done ? 'line-through' : 'none',
-                    lineHeight: 1.5,
-                  }}>
-                    {c.text}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}>
-                    {c.partner === 'both'
-                      ? <><Users size={10} color="#C4A090" /><span style={{ fontSize: '0.7rem', color: '#C4A090' }}>Berdua</span></>
-                      : <><User size={10} color="#C4A090" /><span style={{ fontSize: '0.7rem', color: '#C4A090' }}>{getName(c.partner as 'A' | 'B')}</span></>
-                    }
-                  </div>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-
-          {donePrev < totalPrev && (
-            <p style={{ fontSize: '0.75rem', color: '#C4A090', marginTop: '0.625rem', lineHeight: 1.5 }}>
-              💬 Ada {totalPrev - donePrev} komitmen yang belum selesai — diskusikan bersama, bukan untuk judgement, tapi akuntabilitas gentle.
-            </p>
-          )}
-          {donePrev === totalPrev && (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{ marginTop: '0.625rem', fontSize: '0.8125rem', color: '#3D7A43', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.375rem' }}
-            >
-              <Sparkles size={13} /> Semua komitmen minggu lalu terpenuhi! Luar biasa 🎉
-            </motion.div>
-          )}
+      <div className="card" style={{ padding: '1.15rem', display: 'grid', gap: '0.6rem' }}>
+        <div style={{ fontSize: '0.75rem', color: '#C4A090', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          Weekly Insight (Self-suggestion)
         </div>
-      )}
+        <div style={{ fontSize: '0.9rem', color: '#2A1810', lineHeight: 1.65 }}>{weeklyInsight}</div>
+        <div style={{ fontSize: '0.78rem', color: '#8B6B61' }}>
+          Rata-rata mood: <strong>{avgMood || '-'}</strong>/5 · Habit completion: <strong>{avgHabit}%</strong>
+        </div>
+      </div>
 
-      {/* ── AI Self-Suggestion ───────────────────────────── */}
-      <AnimatePresence>
-        {(showSuggestionA || showSuggestionB) && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="card"
-            style={{ padding: '1.25rem' }}
-          >
-            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-              <Lightbulb size={14} color="#E8846A" /> AI Self-Insight
-              <span style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 400 }}>— berdasarkan pola mood minggu ini</span>
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {showSuggestionA && suggestionA && (
-                <motion.div
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  style={{
-                    background: 'rgba(232,132,106,0.06)',
-                    border: '1px solid rgba(232,132,106,0.2)',
-                    borderRadius: '0.875rem', padding: '0.875rem',
-                  }}
-                >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#E8846A', marginBottom: '0.375rem' }}>
-                    Untuk {getName('A')}
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: '#5A3E37', lineHeight: 1.6 }}>{suggestionA}</p>
-                </motion.div>
-              )}
-              {showSuggestionB && suggestionB && (
-                <motion.div
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  style={{
-                    background: 'rgba(123,174,127,0.06)',
-                    border: '1px solid rgba(123,174,127,0.2)',
-                    borderRadius: '0.875rem', padding: '0.875rem',
-                  }}
-                >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3D7A43', marginBottom: '0.375rem' }}>
-                    Untuk {getName('B')}
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: '#5A3E37', lineHeight: 1.6 }}>{suggestionB}</p>
-                </motion.div>
-              )}
-              <p style={{ fontSize: '0.7rem', color: '#C4A090', fontStyle: 'italic' }}>
-                ✦ Ini saran untuk diri sendiri, bukan penilaian tentang pasangan. Positive framing only.
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <button className="btn-secondary" onClick={() => setOpenTemplates(true)} style={{ justifyContent: 'center' }}>
+        <BookOpen size={14} /> Buka Template Library
+      </button>
 
       <motion.button
         whileHover={{ scale: 1.02 }}
@@ -358,22 +230,20 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
       >
         Lanjut ke Emotion Translation <ArrowRight size={16} />
       </motion.button>
+      <TemplateLibrarySheet open={openTemplates} onClose={() => setOpenTemplates(false)} />
     </div>
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STEP 2 — AI Emotion Translation (Privacy: raw tetap private, partner hanya
-//          menerima versi refined setelah user approve)
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// STEP 2 — AI Emotion Translation
+// ═══════════════════════════════════════════════════════════════════
 function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
-  const { emotionDumps, setRefinedText, shareEmotionDump, partnerA, partnerB } = useMockStore(useShallow((s) => ({
-    emotionDumps:     s.emotionDumps,
-    setRefinedText:   s.setRefinedText,
-    shareEmotionDump: s.shareEmotionDump,
-    partnerA:         s.partnerA,
-    partnerB:         s.partnerB,
-  })))
+  const emotionDumps = useMockStore((s) => s.emotionDumps)
+  const setRefinedText = useMockStore((s) => s.setRefinedText)
+  const shareEmotionDump = useMockStore((s) => s.shareEmotionDump)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
   const [newRaw, setNewRaw]   = useState('')
   const [newPart, setNewPart] = useState<'A' | 'B'>('A')
   const addEmotionDump        = useMockStore((s) => s.addEmotionDump)
@@ -387,7 +257,7 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
 
   async function handleRefine(id: string, rawText: string) {
     setRefiningId(id)
-    await new Promise((r) => setTimeout(r, 1800))
+    await new Promise((r) => setTimeout(r, 1800)) // simulate API
     const refined = simulateAIRefine(rawText)
     setRefinedText(id, refined)
     setRefiningId(null)
@@ -409,18 +279,24 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
           Emosi mentah diubah jadi bahasa yang clear, jujur, dan non-accusatory. Kamu review dulu sebelum share ke pasangan.
         </p>
+        <p style={{ fontSize: '0.78rem', color: '#C4A090', marginTop: '0.35rem' }}>
+          Why this matters: jeda reflektif kecil ini terbukti menurunkan konflik reaktif.
+        </p>
       </div>
 
-      {/* Privacy notice */}
-      <div style={{
-        background: 'linear-gradient(135deg,rgba(232,132,106,0.06),rgba(244,160,160,0.06))',
-        border: '1px solid rgba(232,132,106,0.15)',
-        borderRadius: '1rem', padding: '0.875rem 1rem',
-        display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
-      }}>
+      {/* How it works */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg,rgba(232,132,106,0.06),rgba(244,160,160,0.06))',
+          border: '1px solid rgba(232,132,106,0.15)',
+          borderRadius: '1rem', padding: '0.875rem 1rem',
+          display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+        }}
+      >
         <Wand2 size={16} color="#E8846A" style={{ marginTop: 2, flexShrink: 0 }} />
         <p style={{ fontSize: '0.8rem', color: '#8B6B61', lineHeight: 1.5 }}>
-          AI menjaga tone: <em>honest but kind, specific but not blaming.</em> Raw version <strong>hanya terlihat olehmu</strong>. Partner hanya menerima versi yang sudah di-refine dan kamu approve.
+          AI menjaga tone: <em>honest but kind, specific but not blaming.</em>
+          Raw version tetap terlihat oleh kamu. Partner hanya menerima versi yang sudah dihaluskan.
         </p>
       </div>
 
@@ -431,6 +307,7 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
             Belum ada emotion dump minggu ini. Tulis satu di bawah!
           </p>
         )}
+
         <AnimatePresence>
           {pendingDumps.map((dump) => (
             <motion.div
@@ -444,37 +321,42 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: dump.partner === 'A' ? 'rgba(232,132,106,0.15)' : 'rgba(123,174,127,0.15)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.75rem', fontWeight: 700,
-                    color: dump.partner === 'A' ? '#E8846A' : '#7BAE7F',
-                  }}>
+                  <div
+                    style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: dump.partner === 'A' ? 'rgba(232,132,106,0.15)' : 'rgba(123,174,127,0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.75rem', fontWeight: 700,
+                      color: dump.partner === 'A' ? '#E8846A' : '#7BAE7F',
+                    }}
+                  >
                     {getName(dump.partner).charAt(0).toUpperCase()}
                   </div>
                   <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#2A1810' }}>
                     {getName(dump.partner)}
                   </span>
                 </div>
-                <span style={{ fontSize: '0.7rem', color: '#C4A090' }}>{dump.date}</span>
+                <span style={{ fontSize: '0.7rem', color: '#C4A090' }}>
+                  {dump.date}
+                </span>
               </div>
 
-              {/* Raw text — private label */}
-              <div style={{
-                background: '#FFF8F5', border: '1px solid #EDD5C8',
-                borderRadius: '0.75rem', padding: '0.875rem',
-                fontSize: '0.875rem', color: '#5A3E37', lineHeight: 1.6,
-                fontStyle: 'italic',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#C4A090' }} />
-                  <span style={{ fontSize: '0.7rem', color: '#C4A090', letterSpacing: '0.05em' }}>RAW — hanya kamu yang bisa lihat ini</span>
+              {/* Raw text */}
+              <div
+                style={{
+                  background: '#FFF8F5', border: '1px solid #EDD5C8',
+                  borderRadius: '0.75rem', padding: '0.875rem',
+                  fontSize: '0.875rem', color: '#5A3E37', lineHeight: 1.6,
+                  fontStyle: 'italic',
+                }}
+              >
+                <div style={{ fontSize: '0.7rem', color: '#C4A090', marginBottom: '0.375rem', letterSpacing: '0.05em' }}>
+                  RAW (hanya terlihat olehmu)
                 </div>
                 &ldquo;{dump.rawText}&rdquo;
               </div>
 
-              {/* Refine / result */}
+              {/* Refine button or result */}
               {!dump.refinedText ? (
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -483,7 +365,9 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
                   disabled={refiningId === dump.id}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                    background: refiningId === dump.id ? 'rgba(232,132,106,0.1)' : 'linear-gradient(135deg,#E8846A,#D4705A)',
+                    background: refiningId === dump.id
+                      ? 'rgba(232,132,106,0.1)'
+                      : 'linear-gradient(135deg,#E8846A,#D4705A)',
                     color: refiningId === dump.id ? '#E8846A' : 'white',
                     border: refiningId === dump.id ? '1.5px solid rgba(232,132,106,0.3)' : 'none',
                     borderRadius: '0.75rem', padding: '0.75rem',
@@ -497,7 +381,10 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
                       AI sedang memproses...
                     </>
                   ) : (
-                    <><Wand2 size={15} /> Refine with AI</>
+                    <>
+                      <Wand2 size={15} />
+                      Refine with AI
+                    </>
                   )}
                 </motion.button>
               ) : (
@@ -507,37 +394,40 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
                   style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
                 >
                   {/* Refined result */}
-                  <div style={{
-                    background: 'linear-gradient(135deg,rgba(123,174,127,0.08),rgba(181,212,181,0.08))',
-                    border: '1px solid rgba(123,174,127,0.25)',
-                    borderRadius: '0.75rem', padding: '0.875rem',
-                    fontSize: '0.875rem', color: '#2A1810', lineHeight: 1.7,
-                  }}>
+                  <div
+                    style={{
+                      background: 'linear-gradient(135deg,rgba(123,174,127,0.08),rgba(181,212,181,0.08))',
+                      border: '1px solid rgba(123,174,127,0.25)',
+                      borderRadius: '0.75rem', padding: '0.875rem',
+                      fontSize: '0.875rem', color: '#2A1810', lineHeight: 1.7,
+                    }}
+                  >
                     <div style={{ fontSize: '0.7rem', color: '#5A9660', marginBottom: '0.375rem', letterSpacing: '0.05em', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Sparkles size={11} /> AI REFINED — siap untuk di-review
+                      <Sparkles size={11} /> AI REFINED
                     </div>
                     {dump.refinedText}
                   </div>
 
-                  {/* Review-before-share: approve atau cancel */}
-                  {!dump.shared ? (
-                    <div style={{ display: 'flex', gap: '0.625rem' }}>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => shareEmotionDump(dump.id)}
-                        style={{
-                          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                          background: 'rgba(123,174,127,0.12)',
-                          border: '1.5px solid rgba(123,174,127,0.3)',
-                          borderRadius: '0.75rem', padding: '0.625rem',
-                          color: '#3D7A43', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
-                        }}
-                      >
-                        <Share2 size={14} /> Kirim ke {getName(dump.partner === 'A' ? 'B' : 'A')}
-                      </motion.button>
-                    </div>
-                  ) : (
+                  {/* Share button */}
+                  {!dump.shared && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => shareEmotionDump(dump.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                        background: 'rgba(123,174,127,0.12)',
+                        border: '1.5px solid rgba(123,174,127,0.3)',
+                        borderRadius: '0.75rem', padding: '0.625rem',
+                        color: '#3D7A43', fontWeight: 600, fontSize: '0.875rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Share2 size={14} />
+                      Kirim ke Pasangan
+                    </motion.button>
+                  )}
+                  {dump.shared && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: '#3D7A43', fontSize: '0.8125rem', fontWeight: 600 }}>
                       <CheckCircle2 size={14} />
                       Sudah dikirim ke {getName(dump.partner === 'A' ? 'B' : 'A')} ✓
@@ -550,7 +440,7 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
         </AnimatePresence>
       </div>
 
-      {/* Add new dump */}
+      {/* Add new dump inline */}
       <div className="card" style={{ padding: '1.25rem' }}>
         <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.875rem' }}>
           + Tambah Emotion Dump Baru
@@ -559,7 +449,9 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {(['A', 'B'] as const).map((p) => (
               <button
-                key={p} type="button" onClick={() => setNewPart(p)}
+                key={p}
+                type="button"
+                onClick={() => setNewPart(p)}
                 style={{
                   flex: 1, padding: '0.5rem',
                   background: newPart === p ? (p === 'A' ? 'rgba(232,132,106,0.12)' : 'rgba(123,174,127,0.12)') : '#FFF8F5',
@@ -575,7 +467,7 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
           </div>
           <textarea
             className="input-warm"
-            placeholder="Tulis perasaan mentah... (akan tetap private sampai kamu approve)"
+            placeholder="Tulis perasaan mentah..."
             value={newRaw}
             onChange={(e) => setNewRaw(e.target.value)}
             rows={2}
@@ -600,27 +492,24 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // STEP 3 — 360° Scoring
-// PRD: each partner scores self-perception + perceived-partner
-// Gap = self score vs partner's actual self score (reveals blind spots)
-// ═══════════════════════════════════════════════════════════════════════════════
-function ScoreSlider({ label, value, onChange, color = '#E8846A' }: {
-  label: string; value: number; onChange: (v: number) => void; color?: string
-}) {
+// ═══════════════════════════════════════════════════════════════════
+function ScoreSlider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: '#5A3E37' }}>
         <span style={{ fontWeight: 500 }}>{label}</span>
-        <span style={{ fontWeight: 700, color }}>{value}/10</span>
+        <span style={{ fontWeight: 700, color: '#E8846A' }}>{value}/10</span>
       </div>
       <input
         type="range" min={1} max={10} value={value}
         onChange={(e) => onChange(+e.target.value)}
-        style={{ width: '100%', accentColor: color, height: 4 }}
+        style={{ width: '100%', accentColor: '#E8846A', height: 4 }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#C4A090' }}>
-        <span>Perlu Kerja Keras</span><span>Luar Biasa</span>
+        <span>Perlu Kerja Keras</span>
+        <span>Luar Biasa</span>
       </div>
     </div>
   )
@@ -628,32 +517,22 @@ function ScoreSlider({ label, value, onChange, color = '#E8846A' }: {
 
 const DEFAULT_SCORES = { communication: 7, intimacy: 7, support: 7, fun: 7, effort: 7 }
 
-type ScoreSet = typeof DEFAULT_SCORES
-
 function Step3Scoring({ onNext }: { onNext: () => void }) {
-  const { scores, upsertScore, partnerA, partnerB } = useMockStore(useShallow((s) => ({
-    scores: s.scores, upsertScore: s.upsertScore,
-    partnerA: s.partnerA, partnerB: s.partnerB,
-  })))
+  const scores = useMockStore((s) => s.scores)
+  const upsertScore = useMockStore((s) => s.upsertScore)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
 
   const WEEK = 'W-current'
+
   const existingA = scores.find((s) => s.week === WEEK && s.partner === 'A')
   const existingB = scores.find((s) => s.week === WEEK && s.partner === 'B')
 
-  // self = how A/B rates the relationship themselves
-  const [selfA, setSelfA]         = useState<ScoreSet>(existingA?.self      ?? { ...DEFAULT_SCORES })
-  const [selfB, setSelfB]         = useState<ScoreSet>(existingB?.self      ?? { ...DEFAULT_SCORES })
-  // perceived = A's guess of what B self-scores (and vice versa)
-  const [perceivedA, setPerceivedA] = useState<ScoreSet>(existingA?.perceived ?? { ...DEFAULT_SCORES })
-  const [perceivedB, setPerceivedB] = useState<ScoreSet>(existingB?.perceived ?? { ...DEFAULT_SCORES })
-
-  const [activeTabA, setActiveTabA] = useState<'self' | 'perceived'>('self')
-  const [activeTabB, setActiveTabB] = useState<'self' | 'perceived'>('self')
-  const [saved, setSaved] = useState(false)
-
-  function getName(p: 'A' | 'B') {
-    return (p === 'A' ? partnerA.name : partnerB.name) || `Partner ${p}`
-  }
+  const [selfA, setSelfA] = useState(existingA?.self ?? { ...DEFAULT_SCORES })
+  const [selfB, setSelfB] = useState(existingB?.self ?? { ...DEFAULT_SCORES })
+  const [perceivedA, setPerceivedA] = useState(existingA?.perceived ?? { ...DEFAULT_SCORES })
+  const [perceivedB, setPerceivedB] = useState(existingB?.perceived ?? { ...DEFAULT_SCORES })
+  const [saved, setSaved]  = useState(false)
 
   function handleSave() {
     upsertScore({ week: WEEK, partner: 'A', self: selfA, perceived: perceivedA })
@@ -661,21 +540,12 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
     setSaved(true)
   }
 
-  // Radar data: compare both self-scores
+  // Build radar data
   const radarData = DIMENSIONS.map((dim) => ({
     dimension: DIMENSION_LABELS[dim],
-    [getName('A')]: selfA[dim],
-    [getName('B')]: selfB[dim],
+    [partnerA.name || 'Partner A']: selfA[dim],
+    [partnerB.name || 'Partner B']: selfB[dim],
   }))
-
-  // Gap analysis (PRD: self vs partner's guess of self = perception accuracy)
-  // A.self vs B.perceived[A] → seberapa akurat B menebak perasaan A
-  // B.self vs A.perceived[B] → seberapa akurat A menebak perasaan B
-  const gapRows = DIMENSIONS.map((dim) => {
-    const gapA = selfA[dim] - perceivedB[dim]  // positive = B underestimates A
-    const gapB = selfB[dim] - perceivedA[dim]  // positive = A underestimates B
-    return { dim, gapA, gapB, absA: Math.abs(gapA), absB: Math.abs(gapB) }
-  })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -684,14 +554,17 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
           360° Scoring 🎯
         </h2>
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
-          Masing-masing kasih 2 skor: penilaian diri sendiri + tebakan tentang pasangan. Gap-nya = insight berharga tentang seberapa dalam kalian saling mengenal.
+          Masing-masing kasih skor untuk 5 dimensi hubungan. Gap antar skor = insight berharga.
+        </p>
+        <p style={{ fontSize: '0.78rem', color: '#C4A090', marginTop: '0.35rem' }}>
+          Why this matters: bukan sekadar nilaimu, tapi juga akurasi memahami pasangan.
         </p>
       </div>
 
-      {/* Radar: self scores comparison */}
+      {/* Radar chart */}
       <div className="card" style={{ padding: '1.25rem' }}>
         <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '1rem' }}>
-          📊 Perbandingan Self-Score Kalian
+          📊 Perbandingan Visual
         </h4>
         <ResponsiveContainer width="100%" height={240}>
           <RadarChart data={radarData}>
@@ -701,197 +574,140 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
               tick={{ fontSize: 11, fill: '#8B6B61', fontFamily: 'var(--font-dm-sans)' }}
             />
             <Radar
-              name={getName('A')}
-              dataKey={getName('A')}
-              stroke="#E8846A" fill="#E8846A" fillOpacity={0.18} strokeWidth={2}
+              name={partnerA.name || 'Partner A'}
+              dataKey={partnerA.name || 'Partner A'}
+              stroke="#E8846A"
+              fill="#E8846A"
+              fillOpacity={0.18}
+              strokeWidth={2}
             />
             <Radar
-              name={getName('B')}
-              dataKey={getName('B')}
-              stroke="#7BAE7F" fill="#7BAE7F" fillOpacity={0.18} strokeWidth={2}
+              name={partnerB.name || 'Partner B'}
+              dataKey={partnerB.name || 'Partner B'}
+              stroke="#7BAE7F"
+              fill="#7BAE7F"
+              fillOpacity={0.18}
+              strokeWidth={2}
             />
-            <Legend wrapperStyle={{ fontSize: '0.75rem', paddingTop: '0.5rem' }} />
-            <Tooltip contentStyle={{ background: 'white', border: '1px solid #EDD5C8', borderRadius: '0.75rem', fontSize: '0.8rem' }} />
+            <Legend
+              wrapperStyle={{ fontSize: '0.75rem', paddingTop: '0.5rem' }}
+            />
+            <Tooltip
+              contentStyle={{
+                background: 'white', border: '1px solid #EDD5C8',
+                borderRadius: '0.75rem', fontSize: '0.8rem',
+              }}
+            />
           </RadarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Sliders: Partner A */}
+      {/* Sliders — Partner A */}
       <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#E8846A' }} />
-          <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2A1810' }}>{getName('A')}</h4>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#E8846A' }} />
+          <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2A1810' }}>
+            {partnerA.name || 'Partner A'} — Penilaianku
+          </h4>
         </div>
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.375rem', background: '#FFF8F5', borderRadius: '0.75rem', padding: '0.25rem' }}>
-          {(['self', 'perceived'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTabA(tab)}
-              style={{
-                flex: 1, padding: '0.5rem 0.25rem',
-                background: activeTabA === tab ? 'white' : 'transparent',
-                border: 'none', borderRadius: '0.5rem',
-                fontSize: '0.75rem', fontWeight: activeTabA === tab ? 700 : 500,
-                color: activeTabA === tab ? '#E8846A' : '#8B6B61',
-                cursor: 'pointer',
-                boxShadow: activeTabA === tab ? '0 1px 4px rgba(200,130,100,0.15)' : 'none',
-              }}
-            >
-              {tab === 'self' ? '🙋 Penilaian Diri' : `🔍 Tebakanmu ttg ${getName('B')}`}
-            </button>
-          ))}
-        </div>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTabA}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-          >
-            {activeTabA === 'self' ? (
-              <>
-                <p style={{ fontSize: '0.75rem', color: '#C4A090', fontStyle: 'italic' }}>
-                  &ldquo;Saya rasa hubungan kita di dimensi ini berapa?&rdquo;
-                </p>
-                {DIMENSIONS.map((dim) => (
-                  <ScoreSlider key={dim} label={DIMENSION_LABELS[dim]} value={selfA[dim]}
-                    onChange={(v) => setSelfA((prev) => ({ ...prev, [dim]: v }))} color="#E8846A" />
-                ))}
-              </>
-            ) : (
-              <>
-                <p style={{ fontSize: '0.75rem', color: '#C4A090', fontStyle: 'italic' }}>
-                  &ldquo;Saya pikir {getName('B')} ngerasa dimensi ini berapa?&rdquo;
-                </p>
-                {DIMENSIONS.map((dim) => (
-                  <ScoreSlider key={dim} label={DIMENSION_LABELS[dim]} value={perceivedA[dim]}
-                    onChange={(v) => setPerceivedA((prev) => ({ ...prev, [dim]: v }))} color="#C4A090" />
-                ))}
-              </>
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {DIMENSIONS.map((dim) => (
+          <ScoreSlider
+            key={dim}
+            label={DIMENSION_LABELS[dim]}
+            value={selfA[dim]}
+            onChange={(v) => setSelfA((prev) => ({ ...prev, [dim]: v }))}
+          />
+        ))}
       </div>
 
-      {/* Sliders: Partner B */}
+      {/* Sliders — Partner B */}
       <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#7BAE7F' }} />
-          <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2A1810' }}>{getName('B')}</h4>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#7BAE7F' }} />
+          <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2A1810' }}>
+            {partnerB.name || 'Partner B'} — Penilaianku
+          </h4>
         </div>
-        <div style={{ display: 'flex', gap: '0.375rem', background: '#FFF8F5', borderRadius: '0.75rem', padding: '0.25rem' }}>
-          {(['self', 'perceived'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTabB(tab)}
-              style={{
-                flex: 1, padding: '0.5rem 0.25rem',
-                background: activeTabB === tab ? 'white' : 'transparent',
-                border: 'none', borderRadius: '0.5rem',
-                fontSize: '0.75rem', fontWeight: activeTabB === tab ? 700 : 500,
-                color: activeTabB === tab ? '#7BAE7F' : '#8B6B61',
-                cursor: 'pointer',
-                boxShadow: activeTabB === tab ? '0 1px 4px rgba(90,150,96,0.15)' : 'none',
-              }}
-            >
-              {tab === 'self' ? '🙋 Penilaian Diri' : `🔍 Tebakanmu ttg ${getName('A')}`}
-            </button>
-          ))}
-        </div>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTabB}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-          >
-            {activeTabB === 'self' ? (
-              <>
-                <p style={{ fontSize: '0.75rem', color: '#C4A090', fontStyle: 'italic' }}>
-                  &ldquo;Saya rasa hubungan kita di dimensi ini berapa?&rdquo;
-                </p>
-                {DIMENSIONS.map((dim) => (
-                  <ScoreSlider key={dim} label={DIMENSION_LABELS[dim]} value={selfB[dim]}
-                    onChange={(v) => setSelfB((prev) => ({ ...prev, [dim]: v }))} color="#7BAE7F" />
-                ))}
-              </>
-            ) : (
-              <>
-                <p style={{ fontSize: '0.75rem', color: '#C4A090', fontStyle: 'italic' }}>
-                  &ldquo;Saya pikir {getName('A')} ngerasa dimensi ini berapa?&rdquo;
-                </p>
-                {DIMENSIONS.map((dim) => (
-                  <ScoreSlider key={dim} label={DIMENSION_LABELS[dim]} value={perceivedB[dim]}
-                    onChange={(v) => setPerceivedB((prev) => ({ ...prev, [dim]: v }))} color="#C4A090" />
-                ))}
-              </>
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {DIMENSIONS.map((dim) => (
+          <ScoreSlider
+            key={dim}
+            label={DIMENSION_LABELS[dim]}
+            value={selfB[dim]}
+            onChange={(v) => setSelfB((prev) => ({ ...prev, [dim]: v }))}
+          />
+        ))}
       </div>
 
-      {/* Gap Analysis — seberapa akurat kalian saling menebak */}
+      {/* Perceived Partner Scores */}
+      <div className="card" style={{ padding: '1.25rem', display: 'grid', gap: '1rem' }}>
+        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#2A1810' }}>Perceived Partner View</h4>
+        <p style={{ fontSize: '0.78rem', color: '#8B6B61' }}>
+          Isi prediksimu: menurutmu pasangan menilai hubungan kalian berapa?
+        </p>
+        <div style={{ display: 'grid', gap: '0.85rem' }}>
+          <div style={{ display: 'grid', gap: '0.65rem' }}>
+            <div style={{ fontSize: '0.82rem', color: '#E8846A', fontWeight: 700 }}>{partnerA.name || 'Partner A'} memprediksi {partnerB.name || 'Partner B'}</div>
+            {DIMENSIONS.map((dim) => (
+              <ScoreSlider
+                key={`perceived-a-${dim}`}
+                label={DIMENSION_LABELS[dim]}
+                value={perceivedA[dim]}
+                onChange={(v) => setPerceivedA((prev) => ({ ...prev, [dim]: v }))}
+              />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gap: '0.65rem' }}>
+            <div style={{ fontSize: '0.82rem', color: '#3D7A43', fontWeight: 700 }}>{partnerB.name || 'Partner B'} memprediksi {partnerA.name || 'Partner A'}</div>
+            {DIMENSIONS.map((dim) => (
+              <ScoreSlider
+                key={`perceived-b-${dim}`}
+                label={DIMENSION_LABELS[dim]}
+                value={perceivedB[dim]}
+                onChange={(v) => setPerceivedB((prev) => ({ ...prev, [dim]: v }))}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Gap analysis */}
       <div className="card" style={{ padding: '1.25rem' }}>
-        <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+        <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           <Sparkles size={13} color="#E8846A" /> Gap Analysis
         </h4>
-        <p style={{ fontSize: '0.75rem', color: '#C4A090', marginBottom: '0.875rem', lineHeight: 1.5 }}>
-          Perbedaan antara skor diri sendiri vs tebakan pasangan = seberapa dalam kalian saling memahami.
-        </p>
-
-        {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <div />
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#E8846A', textAlign: 'center' }}>
-            {getName('A')} vs tebakan {getName('B')}
-          </div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7BAE7F', textAlign: 'center' }}>
-            {getName('B')} vs tebakan {getName('A')}
-          </div>
-        </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {gapRows.map(({ dim, gapA, gapB, absA, absB }) => (
-            <div key={dim} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: '#5A3E37', fontWeight: 500 }}>{DIMENSION_LABELS[dim]}</span>
-
-              {/* Gap A */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <div style={{ flex: 1, height: 6, background: '#EDD5C8', borderRadius: 3, overflow: 'hidden' }}>
-                  <motion.div
-                    animate={{ width: `${(selfA[dim] / 10) * 100}%` }}
-                    transition={SPRING}
-                    style={{ height: '100%', background: absA > 2 ? '#F4A0A0' : '#7BAE7F', borderRadius: 3 }}
-                  />
+          {DIMENSIONS.map((dim) => {
+            // gapAtoB = accuracy of A predicting B's self-score on this dimension.
+            // gapBtoA = accuracy of B predicting A's self-score on this dimension.
+            const gapAtoB = Math.abs(perceivedA[dim] - selfB[dim])
+            const gapBtoA = Math.abs(perceivedB[dim] - selfA[dim])
+            const max = Math.max(gapAtoB, gapBtoA)
+            return (
+              <div key={dim} style={{ display: 'grid', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.8rem', color: '#5A3E37', fontWeight: 600 }}>{DIMENSION_LABELS[dim]}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <div style={{ flex: 1, height: 6, background: '#EDD5C8', borderRadius: 3, overflow: 'hidden' }}>
+                    <motion.div
+                      animate={{ width: `${(max / 10) * 100}%` }}
+                      transition={SPRING}
+                      style={{ height: '100%', background: max > 2 ? '#F4A0A0' : '#7BAE7F', borderRadius: 3 }}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
+                      color: max > 2 ? '#C07070' : '#3D7A43',
+                    }}
+                  >
+                    A→B ±{gapAtoB} · B→A ±{gapBtoA}
+                  </span>
                 </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, width: 28, textAlign: 'right', flexShrink: 0, color: absA > 2 ? '#C07070' : '#3D7A43' }}>
-                  {absA === 0 ? '✓' : gapA > 0 ? `+${gapA}` : `${gapA}`}
-                </span>
               </div>
-
-              {/* Gap B */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <div style={{ flex: 1, height: 6, background: '#EDD5C8', borderRadius: 3, overflow: 'hidden' }}>
-                  <motion.div
-                    animate={{ width: `${(selfB[dim] / 10) * 100}%` }}
-                    transition={SPRING}
-                    style={{ height: '100%', background: absB > 2 ? '#F4A0A0' : '#7BAE7F', borderRadius: 3 }}
-                  />
-                </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, width: 28, textAlign: 'right', flexShrink: 0, color: absB > 2 ? '#C07070' : '#3D7A43' }}>
-                  {absB === 0 ? '✓' : gapB > 0 ? `+${gapB}` : `${gapB}`}
-                </span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
-
-        <p style={{ fontSize: '0.7rem', color: '#C4A090', marginTop: '0.875rem', lineHeight: 1.5 }}>
-          ✓ = tepat &nbsp;|&nbsp; ±1–2 = cukup akurat &nbsp;|&nbsp; ±3+ = worth diskusi 💬<br />
-          <span style={{ color: '#F4A0A0' }}>+</span> = underestimate, <span style={{ color: '#7BAE7F' }}>−</span> = overestimate perasaan pasangan
+        <p style={{ fontSize: '0.75rem', color: '#C4A090', marginTop: '0.75rem' }}>
+          ±0–1 = aligned ✓ &nbsp;|&nbsp; ±2+ = worth discussing 💬
         </p>
       </div>
 
@@ -899,7 +715,8 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {!saved ? (
           <motion.button
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
             onClick={handleSave}
             className="btn-secondary"
             style={{ width: '100%', justifyContent: 'center' }}
@@ -920,67 +737,42 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
           </motion.div>
         )}
         <motion.button
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
           onClick={onNext}
           className="btn-primary"
           style={{ width: '100%', justifyContent: 'center', padding: '0.9375rem' }}
         >
-          Lanjut ke Wins & Penutup <ArrowRight size={16} />
+          Lanjut ke Wins & Perayaan <ArrowRight size={16} />
         </motion.button>
       </div>
     </div>
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STEP 4 — Wins Celebration + Set Komitmen Minggu Depan
-// PRD: Celebrate wins, set focus/commitments for next week, close ritual
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// STEP 4 — Wins Celebration
+// ═══════════════════════════════════════════════════════════════════
 function Step4Wins({ onFinish }: { onFinish: () => void }) {
-  const { wins, addWin, addCommitment, partnerA, partnerB, streak } = useMockStore(useShallow((s) => ({
-    wins:          s.wins,
-    addWin:        s.addWin,
-    addCommitment: s.addCommitment,
-    partnerA:      s.partnerA,
-    partnerB:      s.partnerB,
-    streak:        s.streak,
-  })))
-
-  const [winText, setWinText]       = useState('')
-  const [winType, setWinType]       = useState<'relationship' | 'individual'>('relationship')
-  const [winPartner, setWinPartner] = useState<'A' | 'B'>('A')
-  const [showWinForm, setShowWinForm] = useState(false)
-
-  const [commitText, setCommitText]       = useState('')
-  const [commitPartner, setCommitPartner] = useState<Commitment['partner']>('both')
-  const [commitBy, setCommitBy]           = useState<'A' | 'B'>('A')
-  const [showCommitForm, setShowCommitForm] = useState(false)
-  const [newCommitments, setNewCommitments] = useState<{ text: string; partner: Commitment['partner'] }[]>([])
+  const wins = useMockStore((s) => s.wins)
+  const addWin = useMockStore((s) => s.addWin)
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
+  const streak = useMockStore((s) => s.streak)
+  const [text, setText]         = useState('')
+  const [type, setType]         = useState<'relationship' | 'individual'>('relationship')
+  const [partner, setPartner]   = useState<'A' | 'B'>('A')
+  const [showForm, setShowForm] = useState(false)
 
   function getName(p: 'A' | 'B') {
     return (p === 'A' ? partnerA.name : partnerB.name) || `Partner ${p}`
   }
 
-  function handleAddWin(e: React.FormEvent) {
+  function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    if (!winText.trim()) return
-    addWin(winText.trim(), winType, winPartner)
-    setWinText(''); setShowWinForm(false)
-  }
-
-  function handleAddCommit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!commitText.trim()) return
-    setNewCommitments((prev) => [...prev, { text: commitText.trim(), partner: commitPartner }])
-    setCommitText(''); setShowCommitForm(false)
-  }
-
-  function handleFinish() {
-    // Persist semua komitmen baru ke store
-    newCommitments.forEach((c) => {
-      addCommitment(c.text, c.partner, commitBy, 'W-current')
-    })
-    onFinish()
+    if (!text.trim()) return
+    addWin(text.trim(), type, partner)
+    setText(''); setShowForm(false)
   }
 
   const relWins = wins.filter((w) => w.type === 'relationship')
@@ -1002,7 +794,7 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
           Celebrate Wins! ✨
         </h2>
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
-          Acknowledge apa yang sudah bagus — hubungan dan personal growth. Lalu set fokus untuk minggu depan.
+          Acknowledge apa yang sudah bagus minggu ini — hubungan dan personal growth.
         </p>
       </div>
 
@@ -1042,7 +834,8 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.06 }}
                 style={{
-                  background: 'rgba(232,132,106,0.06)', border: '1px solid rgba(232,132,106,0.15)',
+                  background: 'rgba(232,132,106,0.06)',
+                  border: '1px solid rgba(232,132,106,0.15)',
                   borderRadius: '0.75rem', padding: '0.75rem 1rem',
                   fontSize: '0.875rem', color: '#2A1810',
                   display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
@@ -1054,7 +847,9 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
             ))}
           </AnimatePresence>
           {relWins.length === 0 && (
-            <p style={{ color: '#C4A090', fontSize: '0.8125rem', padding: '0.25rem' }}>Belum ada. Tambahkan satu!</p>
+            <p style={{ color: '#C4A090', fontSize: '0.8125rem', padding: '0.25rem' }}>
+              Belum ada. Tambahkan satu!
+            </p>
           )}
         </div>
       </div>
@@ -1073,7 +868,8 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.06 }}
                 style={{
-                  background: 'rgba(123,174,127,0.06)', border: '1px solid rgba(123,174,127,0.15)',
+                  background: 'rgba(123,174,127,0.06)',
+                  border: '1px solid rgba(123,174,127,0.15)',
                   borderRadius: '0.75rem', padding: '0.75rem 1rem',
                   fontSize: '0.875rem', color: '#2A1810',
                   display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem',
@@ -1083,85 +879,111 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
                   <Star size={14} color="#7BAE7F" fill="#7BAE7F" style={{ marginTop: 2, flexShrink: 0 }} />
                   <span>{win.text}</span>
                 </div>
-                <span style={{
-                  fontSize: '0.7rem', color: win.partner === 'A' ? '#E8846A' : '#7BAE7F',
-                  background: win.partner === 'A' ? 'rgba(232,132,106,0.1)' : 'rgba(123,174,127,0.1)',
-                  borderRadius: '2rem', padding: '0.125rem 0.5rem', flexShrink: 0, fontWeight: 600,
-                }}>
+                <span
+                  style={{
+                    fontSize: '0.7rem', color: win.partner === 'A' ? '#E8846A' : '#7BAE7F',
+                    background: win.partner === 'A' ? 'rgba(232,132,106,0.1)' : 'rgba(123,174,127,0.1)',
+                    borderRadius: '2rem', padding: '0.125rem 0.5rem', flexShrink: 0, fontWeight: 600,
+                  }}
+                >
                   {getName(win.partner)}
                 </span>
               </motion.div>
             ))}
           </AnimatePresence>
           {indWins.length === 0 && (
-            <p style={{ color: '#C4A090', fontSize: '0.8125rem', padding: '0.25rem' }}>Belum ada. Rayakan pencapaianmu!</p>
+            <p style={{ color: '#C4A090', fontSize: '0.8125rem', padding: '0.25rem' }}>
+              Belum ada. Rayakan pencapaianmu!
+            </p>
           )}
         </div>
       </div>
 
-      {/* Add win form */}
+      {/* Add win */}
       <div>
         <motion.button
           whileTap={{ scale: 0.96 }}
-          onClick={() => setShowWinForm((v) => !v)}
+          onClick={() => setShowForm((v) => !v)}
           style={{
-            background: showWinForm ? 'rgba(237,213,200,0.6)' : 'rgba(232,132,106,0.1)',
-            border: `1.5px dashed ${showWinForm ? '#C4A090' : 'rgba(232,132,106,0.35)'}`,
+            background: showForm ? 'rgba(237,213,200,0.6)' : 'rgba(232,132,106,0.1)',
+            border: `1.5px dashed ${showForm ? '#C4A090' : 'rgba(232,132,106,0.35)'}`,
             borderRadius: '1rem', padding: '0.75rem',
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-            color: showWinForm ? '#8B6B61' : '#E8846A', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+            color: showForm ? '#8B6B61' : '#E8846A', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
           }}
         >
           <Plus size={15} />
-          {showWinForm ? 'Batal' : 'Tambah Win Baru'}
+          {showForm ? 'Batal' : 'Tambah Win Baru'}
         </motion.button>
+
         <AnimatePresence>
-          {showWinForm && (
+          {showForm && (
             <motion.form
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              onSubmit={handleAddWin}
+              onSubmit={handleAdd}
               style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem', overflow: 'hidden' }}
             >
+              {/* Type toggle */}
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {(['relationship', 'individual'] as const).map((t) => (
-                  <button key={t} type="button" onClick={() => setWinType(t)} style={{
-                    flex: 1, padding: '0.5rem',
-                    background: winType === t ? (t === 'relationship' ? 'rgba(232,132,106,0.1)' : 'rgba(123,174,127,0.1)') : '#FFF8F5',
-                    border: `1.5px solid ${winType === t ? (t === 'relationship' ? 'rgba(232,132,106,0.4)' : 'rgba(123,174,127,0.4)') : '#EDD5C8'}`,
-                    borderRadius: '0.625rem', fontSize: '0.8rem',
-                    color: winType === t ? (t === 'relationship' ? '#E8846A' : '#3D7A43') : '#8B6B61',
-                    cursor: 'pointer', fontWeight: winType === t ? 700 : 500,
-                  }}>
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    style={{
+                      flex: 1, padding: '0.5rem',
+                      background: type === t ? (t === 'relationship' ? 'rgba(232,132,106,0.1)' : 'rgba(123,174,127,0.1)') : '#FFF8F5',
+                      border: `1.5px solid ${type === t ? (t === 'relationship' ? 'rgba(232,132,106,0.4)' : 'rgba(123,174,127,0.4)') : '#EDD5C8'}`,
+                      borderRadius: '0.625rem', fontSize: '0.8rem',
+                      color: type === t ? (t === 'relationship' ? '#E8846A' : '#3D7A43') : '#8B6B61',
+                      cursor: 'pointer', fontWeight: type === t ? 700 : 500,
+                    }}
+                  >
                     {t === 'relationship' ? '❤️ Berdua' : '⭐ Personal'}
                   </button>
                 ))}
               </div>
-              {winType === 'individual' && (
+
+              {/* Partner (only for individual) */}
+              {type === 'individual' && (
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   {(['A', 'B'] as const).map((p) => (
-                    <button key={p} type="button" onClick={() => setWinPartner(p)} style={{
-                      flex: 1, padding: '0.375rem',
-                      background: winPartner === p ? (p === 'A' ? 'rgba(232,132,106,0.1)' : 'rgba(123,174,127,0.1)') : 'transparent',
-                      border: `1px solid ${winPartner === p ? (p === 'A' ? 'rgba(232,132,106,0.35)' : 'rgba(123,174,127,0.35)') : '#EDD5C8'}`,
-                      borderRadius: '0.5rem', fontSize: '0.75rem',
-                      color: winPartner === p ? (p === 'A' ? '#E8846A' : '#3D7A43') : '#8B6B61',
-                      cursor: 'pointer', fontWeight: winPartner === p ? 600 : 400,
-                    }}>
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPartner(p)}
+                      style={{
+                        flex: 1, padding: '0.375rem',
+                        background: partner === p ? (p === 'A' ? 'rgba(232,132,106,0.1)' : 'rgba(123,174,127,0.1)') : 'transparent',
+                        border: `1px solid ${partner === p ? (p === 'A' ? 'rgba(232,132,106,0.35)' : 'rgba(123,174,127,0.35)') : '#EDD5C8'}`,
+                        borderRadius: '0.5rem', fontSize: '0.75rem',
+                        color: partner === p ? (p === 'A' ? '#E8846A' : '#3D7A43') : '#8B6B61',
+                        cursor: 'pointer', fontWeight: partner === p ? 600 : 400,
+                      }}
+                    >
                       {getName(p)}
                     </button>
                   ))}
                 </div>
               )}
+
               <textarea
                 className="input-warm"
-                placeholder="Ceritakan pencapaiannya..."
-                value={winText}
-                onChange={(e) => setWinText(e.target.value)}
-                rows={2} style={{ resize: 'none' }} autoFocus
+                placeholder="Describe the win..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={2}
+                style={{ resize: 'none' }}
+                autoFocus
               />
-              <button type="submit" className="btn-primary" disabled={!winText.trim()} style={{ justifyContent: 'center', padding: '0.625rem' }}>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={!text.trim()}
+                style={{ justifyContent: 'center', padding: '0.625rem' }}
+              >
                 Tambahkan Win 🎉
               </button>
             </motion.form>
@@ -1169,111 +991,11 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
         </AnimatePresence>
       </div>
 
-      {/* ── Set Komitmen untuk Minggu Depan ─────────────────── */}
-      <div className="card" style={{ padding: '1.25rem' }}>
-        <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <Target size={14} color="#7BAE7F" /> Fokus Minggu Depan
-        </h4>
-        <p style={{ fontSize: '0.75rem', color: '#C4A090', marginBottom: '0.875rem', lineHeight: 1.5 }}>
-          Set 1-3 komitmen kecil yang realistis. Akan di-review di ritual berikutnya.
-        </p>
-
-        {/* List komitmen baru */}
-        {newCommitments.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <AnimatePresence>
-              {newCommitments.map((c, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-                    background: 'rgba(123,174,127,0.06)', border: '1px solid rgba(123,174,127,0.2)',
-                    borderRadius: '0.75rem', padding: '0.625rem 0.875rem',
-                  }}
-                >
-                  <Check size={14} color="#7BAE7F" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '0.8125rem', color: '#2A1810', lineHeight: 1.4 }}>{c.text}</p>
-                    <span style={{ fontSize: '0.7rem', color: '#C4A090' }}>
-                      {c.partner === 'both' ? '👥 Berdua' : `👤 ${getName(c.partner as 'A' | 'B')}`}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setNewCommitments((prev) => prev.filter((_, j) => j !== i))}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.5 }}
-                  >
-                    <X size={12} color="#8B6B61" />
-                  </button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Add commit button */}
-        {!showCommitForm ? (
-          <button
-            onClick={() => setShowCommitForm(true)}
-            style={{
-              background: 'rgba(123,174,127,0.08)',
-              border: '1.5px dashed rgba(123,174,127,0.35)',
-              borderRadius: '0.875rem', padding: '0.625rem',
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
-              color: '#3D7A43', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer',
-            }}
-          >
-            <Plus size={13} /> Tambah Komitmen
-          </button>
-        ) : (
-          <motion.form
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleAddCommit}
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}
-          >
-            <textarea
-              className="input-warm"
-              placeholder='Contoh: "Date night tanpa HP tiap Jumat"'
-              value={commitText}
-              onChange={(e) => setCommitText(e.target.value)}
-              rows={2} style={{ resize: 'none' }} autoFocus
-            />
-            {/* Partner selector */}
-            <div style={{ display: 'flex', gap: '0.375rem' }}>
-              {(['both', 'A', 'B'] as const).map((p) => (
-                <button key={p} type="button" onClick={() => setCommitPartner(p)}
-                  style={{
-                    flex: 1, padding: '0.375rem 0.25rem',
-                    background: commitPartner === p ? 'rgba(123,174,127,0.12)' : 'transparent',
-                    border: `1px solid ${commitPartner === p ? 'rgba(123,174,127,0.35)' : '#EDD5C8'}`,
-                    borderRadius: '0.5rem', fontSize: '0.72rem',
-                    color: commitPartner === p ? '#3D7A43' : '#8B6B61',
-                    cursor: 'pointer', fontWeight: commitPartner === p ? 600 : 400,
-                  }}
-                >
-                  {p === 'both' ? '👥 Berdua' : `👤 ${getName(p)}`}
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button type="button" onClick={() => setShowCommitForm(false)} className="btn-secondary" style={{ flex: 1, justifyContent: 'center', padding: '0.5rem' }}>
-                Batal
-              </button>
-              <button type="submit" className="btn-primary" disabled={!commitText.trim()} style={{ flex: 2, justifyContent: 'center', padding: '0.5rem' }}>
-                Tambahkan
-              </button>
-            </div>
-          </motion.form>
-        )}
-      </div>
-
       {/* Finish ritual */}
       <motion.button
         whileHover={{ scale: 1.02, y: -2 }}
         whileTap={{ scale: 0.97 }}
-        onClick={handleFinish}
+        onClick={onFinish}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
@@ -1291,226 +1013,64 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
           Ritual Selesai! 🌸
         </span>
         <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>
-          {newCommitments.length > 0
-            ? `${newCommitments.length} komitmen tersimpan untuk minggu depan`
-            : 'Sampai weekly ritual berikutnya'}
+          Sampai weekly ritual berikutnya
         </span>
       </motion.button>
     </div>
   )
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAGE SHELL — Weekly Ritual
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// PAGE — Weekly Ritual shell
+// ═══════════════════════════════════════════════════════════════════
 const TOTAL_STEPS = 4
-
-// ── Freemium Gate Overlay ─────────────────────────────────────────────────────
-const PREMIUM_PERKS = [
-  { icon: Sparkles, text: 'AI Cooling Off — terjemahkan emosi tanpa drama' },
-  { icon: Target,   text: '360° relationship scoring + gap analysis' },
-  { icon: Trophy,   text: 'Weekly wins celebration & commitment tracker' },
-  { icon: TrendingUp, text: 'Monthly recap dengan trend & milestone badges' },
-]
-
-function FreemiumGate({ onDemo }: { onDemo: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
-        background: 'rgba(42,24,16,0.55)',
-        backdropFilter: 'blur(12px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.5rem',
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 32, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 280, damping: 26, delay: 0.1 }}
-        style={{
-          width: '100%',
-          maxWidth: 420,
-          background: 'rgba(255,255,255,0.97)',
-          borderRadius: '2rem',
-          padding: '2rem',
-          boxShadow: '0 32px 80px rgba(42,24,16,0.25)',
-          border: '1px solid rgba(237,213,200,0.6)',
-          textAlign: 'center',
-        }}
-      >
-        <div
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: '1.25rem',
-            background: 'linear-gradient(135deg,#FFF5E8,#FFE5C0)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1.25rem',
-          }}
-        >
-          <Crown size={28} color="#B8956A" />
-        </div>
-
-        <h2
-          style={{
-            fontFamily: 'var(--font-playfair)',
-            fontSize: '1.5rem',
-            fontWeight: 700,
-            color: '#2A1810',
-            marginBottom: '0.375rem',
-          }}
-        >
-          Weekly Ritual — Premium
-        </h2>
-        <p style={{ color: '#8B6B61', fontSize: '0.9rem', lineHeight: 1.65, marginBottom: '1.75rem' }}>
-          Ritual mingguan yang penuh adalah fitur premium. Investasi terbaik untuk hubunganmu.
-        </p>
-
-        {/* Perks list */}
-        <div
-          style={{
-            background: 'rgba(255,245,238,0.6)',
-            borderRadius: '1.25rem',
-            padding: '1.25rem',
-            marginBottom: '1.5rem',
-            textAlign: 'left',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-          }}
-        >
-          {PREMIUM_PERKS.map(({ icon: Icon, text }) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '0.5rem',
-                  background: 'rgba(232,132,106,0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <Icon size={14} color="#E8846A" />
-              </div>
-              <span style={{ fontSize: '0.875rem', color: '#5A3E38', lineHeight: 1.5, paddingTop: 4 }}>{text}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Primary CTA */}
-        <motion.a
-          href="/#harga"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            background: 'linear-gradient(135deg,#E8846A,#F4A0A0)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '1rem',
-            padding: '0.9375rem',
-            fontSize: '0.9375rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            textDecoration: 'none',
-            marginBottom: '0.75rem',
-          }}
-        >
-          <Crown size={16} />
-          Upgrade ke Premium — Rp 49k/bln
-        </motion.a>
-
-        {/* Demo CTA */}
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={onDemo}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            background: 'transparent',
-            color: '#8B6B61',
-            border: '1.5px solid rgba(237,213,200,0.8)',
-            borderRadius: '1rem',
-            padding: '0.875rem',
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          <Sparkles size={14} color="#C4A090" />
-          Coba Demo Premium (testing)
-        </motion.button>
-
-        <p style={{ fontSize: '0.75rem', color: '#C4A090', marginTop: '0.875rem' }}>
-          Demo mode aktif untuk evaluasi produk. Tidak ada commitment.
-        </p>
-      </motion.div>
-    </motion.div>
-  )
-}
 
 export default function WeeklyRitualPage() {
   const router = useRouter()
-  const { partnerA, partnerB, activeWeeklyStep, setActiveWeeklyStep, isPremium, setPremium } = useMockStore(useShallow((s) => ({
-    partnerA:            s.partnerA,
-    partnerB:            s.partnerB,
-    activeWeeklyStep:    s.activeWeeklyStep,
-    setActiveWeeklyStep: s.setActiveWeeklyStep,
-    isPremium:           s.isPremium,
-    setPremium:          s.setPremium,
-  })))
+  const partnerA = useMockStore((s) => s.partnerA)
+  const partnerB = useMockStore((s) => s.partnerB)
+  const activeWeeklyStep = useMockStore((s) => s.activeWeeklyStep)
+  const setActiveWeeklyStep = useMockStore((s) => s.setActiveWeeklyStep)
+  const incrementWeeklyCompletions = useMockStore((s) => s.incrementWeeklyCompletions)
+  const weeklyCompletions = useMockStore((s) => s.weeklyCompletions)
+  const coupleId = useMockStore((s) => s.coupleId)
+  const { trackOnce } = useAnalytics()
 
-  const [step, setStep]     = useState(activeWeeklyStep)
-  const [direction, setDir] = useState(1)
+  const [step, setStep]       = useState(activeWeeklyStep)
+  const [direction, setDir]   = useState(1)
 
   useEffect(() => {
     if (!partnerA.joined || !partnerB.joined) router.replace('/onboarding')
   }, [])
 
   function goNext() {
-    setDir(1)
-    const next = Math.min(step + 1, TOTAL_STEPS - 1)
+    setDir(1); const next = Math.min(step + 1, TOTAL_STEPS - 1)
     setStep(next); setActiveWeeklyStep(next)
   }
+
   function goBack() {
     if (step === 0) { router.push('/dashboard'); return }
-    setDir(-1)
-    const prev = step - 1
+    setDir(-1); const prev = step - 1
     setStep(prev); setActiveWeeklyStep(prev)
   }
+
   function finish() {
+    incrementWeeklyCompletions()
+    trackOnce('first_weekly_completed', { coupleId, source: 'weekly_ritual_finish', weeklyCompletions: weeklyCompletions + 1 })
     setActiveWeeklyStep(0)
-    router.push('/dashboard')
+    router.push('/weekly-complete')
   }
 
   if (!partnerA.joined || !partnerB.joined) return null
 
   const PAGE_IN  = { opacity: 0, x: direction > 0 ? 40 : -40, scale: 0.97 }
-  const PAGE_OUT = { opacity: 0, x: direction > 0 ? -40 : 40,  scale: 0.97 }
+  const PAGE_OUT = { opacity: 0, x: direction > 0 ? -40 : 40, scale: 0.97 }
 
   return (
-    <div className="bg-spring" style={{ minHeight: '100dvh', padding: '1.5rem 1rem 3rem', position: 'relative' }}>
-      {/* Freemium gate — renders on top if not premium */}
-      {!isPremium && <FreemiumGate onDemo={() => setPremium(true)} />}
+    <div
+      className="bg-spring"
+      style={{ minHeight: '100dvh', padding: '1.5rem 1rem 3rem' }}
+    >
       <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
         {/* Top bar */}
@@ -1522,13 +1082,20 @@ export default function WeeklyRitualPage() {
           <button onClick={goBack} className="btn-ghost" style={{ padding: '0.5rem 0.75rem' }}>
             <ChevronLeft size={16} /> {step === 0 ? 'Kembali' : 'Sebelumnya'}
           </button>
-          <div style={{ fontFamily: 'var(--font-playfair)', fontSize: '1rem', fontWeight: 700, color: '#2A1810' }}>
-            Weekly Ritual ✨
+          <div style={{ textAlign: 'center' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-playfair)',
+                fontSize: '1rem', fontWeight: 700, color: '#2A1810',
+              }}
+            >
+              Weekly Ritual ✨
+            </div>
           </div>
           <div style={{ width: 80 }} />
         </motion.div>
 
-        {/* Progress dots */}
+        {/* Progress */}
         <StepDots current={step} total={TOTAL_STEPS} />
 
         {/* Step content */}

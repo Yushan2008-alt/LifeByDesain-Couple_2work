@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMockStore, type MoodEmoji, type MoodTag, type TodoCategory } from '@/store/mockStore'
-import { useShallow } from 'zustand/shallow'
-import { today, CATEGORY_CONFIG, INTENSITY_LABELS, habitCompletionThisWeek } from '@/lib/utils'
+import { today, CATEGORY_CONFIG, INTENSITY_LABELS, habitCompletionThisWeek, streakRiskStatus } from '@/lib/utils'
+import { useAnalytics } from '@/lib/analytics'
+import { PREMIUM_UNLOCK_TARGET } from '@/lib/pricing'
 import {
   Flame, Plus, Trash2, CheckCircle2, Circle, CalendarCheck, Heart,
-  MessageCircle, ChevronRight, Sparkles, Tag, BookOpen, Lock,
+  MessageCircle, ChevronRight, Sparkles, Tag, BellRing,
 } from 'lucide-react'
 
 // ── Spring variant ────────────────────────────────────────────────────────────
@@ -21,6 +22,9 @@ function StreakBadge() {
   const streak = useMockStore((s) => s.streak)
   const partnerA = useMockStore((s) => s.partnerA)
   const partnerB = useMockStore((s) => s.partnerB)
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const habits = useMockStore((s) => s.habits)
+  const riskStatus = streakRiskStatus({ todayDate: today(), moodHistory, habits })
 
   return (
     <motion.div
@@ -51,6 +55,11 @@ function StreakBadge() {
           <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '2.5rem', fontWeight: 700, lineHeight: 1 }}>{streak}</span>
           <span style={{ fontSize: '0.875rem', opacity: 0.85 }}>hari berturut-turut</span>
         </div>
+        {riskStatus === 'at-risk' && (
+          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', opacity: 0.95 }}>
+            ⚠️ Streak at risk — salah satu partner belum engage hari ini (buffer 1 hari).
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
@@ -108,6 +117,8 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
   const [intensity, setIntensity] = useState(3)
   const [tags, setTags] = useState<MoodTag[]>([])
   const [saved, setSaved] = useState(false)
+  const coupleId = useMockStore((s) => s.coupleId)
+  const { trackOnce } = useAnalytics()
 
   const todayEntries = moodHistory.filter((m) => m.date === today() && m.partner === activePartner)
   const latestToday  = todayEntries[todayEntries.length - 1]
@@ -129,6 +140,7 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
     const d = new Date()
     const DAY_LABELS = ['Min','Sen','Sel','Rab','Kam','Jum','Sab']
     addMoodEntry({ date: today(), dayLabel: DAY_LABELS[d.getDay()], emoji: selected, intensity, tags, partner: activePartner })
+    trackOnce('first_mood_logged', { coupleId, source: 'dashboard_mood_tracker', partner: activePartner })
     setSaved(true)
     setTimeout(() => { setSaved(false); setSelected(null); setTags([]) }, 2000)
   }
@@ -145,6 +157,11 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
       </div>
 
       {/* 7-day sparkline */}
+      {!latestToday && (
+        <p style={{ fontSize: '0.78rem', color: '#8B6B61' }}>
+          Belum ada mood hari ini. Mulai dari satu tap emoji untuk aktivasi harian ✨
+        </p>
+      )}
       <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         {days.map(({ date, entry }, i) => {
           const h = entry ? (entry.intensity / 5) * 36 + 8 : 8
@@ -278,6 +295,74 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+function PremiumTrialCTA() {
+  const router = useRouter()
+  const trialStarted = useMockStore((s) => s.trialStarted)
+  const weeklyCompletions = useMockStore((s) => s.weeklyCompletions)
+  const coupleId = useMockStore((s) => s.coupleId)
+  const { track } = useAnalytics()
+
+  if (trialStarted) return null
+
+  return (
+    <div
+      style={{
+        background: 'linear-gradient(135deg,#FFF5EE,#FFE8D6)',
+        borderRadius: '1.25rem',
+        border: '1px solid rgba(232,132,106,0.25)',
+        padding: '1rem 1.1rem',
+        display: 'grid',
+        gap: '0.65rem',
+      }}
+    >
+      <div>
+        <div style={{ fontSize: '0.72rem', color: '#C07070', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>
+          Revenue Mode
+        </div>
+        <div style={{ fontFamily: 'var(--font-playfair)', color: '#2A1810', fontSize: '1.05rem', fontWeight: 700 }}>
+          Mulai Free Trial 7 hari
+        </div>
+        <p style={{ color: '#8B6B61', fontSize: '0.83rem', marginTop: '0.2rem' }}>
+          Lanjutkan ke premium insight. Progress ritual kamu: <strong>{weeklyCompletions}/{PREMIUM_UNLOCK_TARGET}</strong>.
+        </p>
+      </div>
+      <button
+        className="btn-primary"
+        style={{ justifyContent: 'center' }}
+        onClick={() => {
+          track('subscribe_clicked', { source: 'dashboard_sticky_cta', coupleId, weeklyCompletions })
+          router.push('/pricing')
+        }}
+      >
+        Mulai Free Trial 7 hari
+      </button>
+    </div>
+  )
+}
+
+function ReminderOptInCard() {
+  const reminderOptIn = useMockStore((s) => s.reminderOptIn)
+  const setReminderOptIn = useMockStore((s) => s.setReminderOptIn)
+
+  return (
+    <div className="card" style={{ display: 'grid', gap: '0.6rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#2A1810', fontWeight: 700, fontSize: '0.9rem' }}>
+        <BellRing size={14} color="#7BAE7F" /> Reminder personal
+      </div>
+      <p style={{ fontSize: '0.82rem', color: '#8B6B61', lineHeight: 1.6 }}>
+        Mau diingatkan dengan lembut saat kamu belum sempat check-in? Kami kirim pengingat personal (email/push placeholder).
+      </p>
+      <button
+        className={reminderOptIn ? 'btn-secondary' : 'btn-primary'}
+        style={{ justifyContent: 'center' }}
+        onClick={() => setReminderOptIn(!reminderOptIn)}
+      >
+        {reminderOptIn ? 'Pengingat aktif ✓' : 'Aktifkan reminder personal'}
+      </button>
     </div>
   )
 }
@@ -707,152 +792,6 @@ function EmotionDumpWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 7. PRIVATE JOURNAL
-// PRD: "Free-form text entry, tagged by date, Private by default, ga share
-//       kecuali user explicit mau." — private selamanya, tidak masuk weekly share.
-// ─────────────────────────────────────────────────────────────────────────────
-function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
-  const { addJournal, journals } = useMockStore(useShallow((s) => ({
-    addJournal: s.addJournal,
-    journals:   s.journals,
-  })))
-  const [text, setText]     = useState('')
-  const [saved, setSaved]   = useState(false)
-  const [expanded, setExpanded] = useState(false)
-
-  const myJournals = journals
-    .filter((j) => j.partner === activePartner)
-    .slice()
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 3) // show last 3
-
-  function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    if (!text.trim()) return
-    addJournal(text.trim(), activePartner)
-    setText('')
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: '0.75rem',
-          background: 'rgba(107,159,212,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <BookOpen size={16} color="#6B9FD4" />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.0625rem', fontWeight: 600, color: '#2A1810' }}>
-              Jurnal Pribadi
-            </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(107,159,212,0.1)', borderRadius: '2rem', padding: '0.125rem 0.5rem' }}>
-              <Lock size={9} color="#6B9FD4" />
-              <span style={{ fontSize: '0.65rem', color: '#6B9FD4', fontWeight: 600 }}>PRIVATE</span>
-            </div>
-          </div>
-          <p style={{ fontSize: '0.8rem', color: '#8B6B61', lineHeight: 1.5, marginTop: '0.125rem' }}>
-            Catatan harianmu. Private selamanya — tidak pernah di-share ke pasangan.
-          </p>
-        </div>
-      </div>
-
-      {/* Recent journals preview */}
-      {myJournals.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-              display: 'flex', alignItems: 'center', gap: '0.375rem',
-              fontSize: '0.75rem', color: '#8B6B61', fontWeight: 500,
-            }}
-          >
-            <span>📖 {myJournals.length} catatan terakhir</span>
-            <span style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▾</span>
-          </button>
-          <AnimatePresence>
-            {expanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-              >
-                {myJournals.map((j) => (
-                  <div
-                    key={j.id}
-                    style={{
-                      background: 'rgba(107,159,212,0.05)',
-                      border: '1px solid rgba(107,159,212,0.15)',
-                      borderRadius: '0.75rem', padding: '0.75rem',
-                    }}
-                  >
-                    <div style={{ fontSize: '0.7rem', color: '#6B9FD4', marginBottom: '0.25rem', fontWeight: 500 }}>{j.date}</div>
-                    <p style={{ fontSize: '0.8125rem', color: '#5A3E37', lineHeight: 1.6, margin: 0 }}>
-                      {j.text.length > 120 ? j.text.slice(0, 120) + '…' : j.text}
-                    </p>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* Entry form */}
-      <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <textarea
-          className="input-warm"
-          placeholder="Tulis apapun yang ada di pikiranmu hari ini... (tidak akan pernah dibagikan)"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={3}
-          style={{ resize: 'none' }}
-        />
-        <AnimatePresence mode="wait">
-          {!saved ? (
-            <motion.button
-              key="save"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              type="submit"
-              disabled={!text.trim()}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                background: 'rgba(107,159,212,0.12)',
-                border: '1.5px solid rgba(107,159,212,0.3)',
-                borderRadius: '0.75rem', padding: '0.625rem',
-                color: '#4A7FAA', fontWeight: 600, fontSize: '0.875rem',
-                cursor: text.trim() ? 'pointer' : 'not-allowed', opacity: text.trim() ? 1 : 0.6,
-              }}
-            >
-              <Lock size={13} /> Simpan (Private)
-            </motion.button>
-          ) : (
-            <motion.div
-              key="done"
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-              style={{
-                background: 'rgba(107,159,212,0.1)',
-                border: '1px solid rgba(107,159,212,0.25)',
-                borderRadius: '0.875rem', padding: '0.75rem',
-                textAlign: 'center', color: '#4A7FAA', fontWeight: 600, fontSize: '0.875rem',
-              }}
-            >
-              📔 Tersimpan — hanya kamu yang bisa baca ini
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </form>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
@@ -944,6 +883,7 @@ export default function DashboardPage() {
 
         {/* — Streak ────────────────────────────────────────────── */}
         <StreakBadge />
+        <PremiumTrialCTA />
 
         {/* — Partner status ──────────────────────────────────── */}
         <PartnerStatus activePartner={activePartner} />
@@ -968,16 +908,15 @@ export default function DashboardPage() {
           <EmotionDumpWidget activePartner={activePartner} />
         </motion.div>
 
-        {/* — Private journal ───────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.3 }}>
-          <PrivateJournalWidget activePartner={activePartner} />
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.27 }}>
+          <ReminderOptInCard />
         </motion.div>
 
         {/* — CTA to Weekly Ritual ──────────────────────────────── */}
         <motion.button
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ ...SPRING, delay: 0.35 }}
+          transition={{ ...SPRING, delay: 0.3 }}
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => router.push('/weekly-ritual')}
