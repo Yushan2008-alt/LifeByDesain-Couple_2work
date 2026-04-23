@@ -71,6 +71,7 @@ export interface WeeklyWin {
   text: string
   type: 'relationship' | 'individual'
   partner: 'A' | 'B'
+  week: string
 }
 
 export type ScoreVector = {
@@ -79,6 +80,10 @@ export type ScoreVector = {
   support: number
   fun: number
   effort: number
+}
+
+export type RelationshipContext = {
+  focus: string
 }
 
 // ============================================================
@@ -172,9 +177,9 @@ function buildDummyData() {
 
   // ─── Weekly Wins ─────────────────────────────────────────
   const wins: WeeklyWin[] = [
-    { id: 'w1', text: 'Kita masak makan malam bareng 3 hari berturut-turut! 🍳', type: 'relationship', partner: 'A' },
-    { id: 'w2', text: 'Aku berhasil olahraga 4x minggu ini!', type: 'individual', partner: 'A' },
-    { id: 'w3', text: 'Quality conversation tanpa distraksi HP kemarin 🌙', type: 'relationship', partner: 'B' },
+    { id: 'w1', text: 'Kita masak makan malam bareng 3 hari berturut-turut! 🍳', type: 'relationship', partner: 'A', week: 'W-current' },
+    { id: 'w2', text: 'Aku berhasil olahraga 4x minggu ini!', type: 'individual', partner: 'A', week: 'W-current' },
+    { id: 'w3', text: 'Quality conversation tanpa distraksi HP kemarin 🌙', type: 'relationship', partner: 'B', week: 'W-current' },
   ]
 
   return { moodHistory, habits, todos, emotionDumps, scores, wins }
@@ -246,6 +251,9 @@ interface MockStore {
   weeklyCompletions: number
   trialStarted: boolean
   reminderOptIn: boolean
+  isPremium: boolean
+  achievements: string[]
+  relationshipContext: RelationshipContext | null
   baseline360: {
     partnerA: ScoreVector
     partnerB: ScoreVector
@@ -291,6 +299,9 @@ function createInitialState() {
     weeklyCompletions: 1,
     trialStarted: false,
     reminderOptIn: false,
+    isPremium: false,
+    achievements: ['first_mood', 'streak_7', 'first_weekly_ritual'],
+    relationshipContext: null,
     baseline360: null,
     ...dummy,
   }
@@ -367,7 +378,7 @@ export const useMockStore = create<MockStore>()(
         })),
 
       addWin: (text, type, partner) =>
-        set((s) => ({ wins: [...s.wins, { id: 'w' + Date.now(), text, type, partner }] })),
+        set((s) => ({ wins: [...s.wins, { id: 'w' + Date.now(), text, type, partner, week: 'W-current' }] })),
 
       setActiveWeeklyStep: (step) => set({ activeWeeklyStep: step }),
       incrementWeeklyCompletions: () => set((s) => ({ weeklyCompletions: s.weeklyCompletions + 1 })),
