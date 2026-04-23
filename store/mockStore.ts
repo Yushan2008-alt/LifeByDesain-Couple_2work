@@ -10,6 +10,13 @@ export type MoodEmoji = '😊' | '😄' | '🥰' | '😐' | '😔' | '😤' | '�
 export type MoodTag   = 'work' | 'family' | 'health' | 'intimacy' | 'stress' | 'joy' | 'tired' | 'peaceful' | 'excited'
 export type TodoCategory = 'home' | 'errands' | 'social' | 'plans' | 'finances'
 
+// ── Relationship Context ──────────────────────────────────────────────────────
+export interface RelationshipContext {
+  duration: string  // '< 6 bulan' | '6 bulan - 1 tahun' | '1-2 tahun' | '2-5 tahun' | '5+ tahun'
+  stage: string     // 'Pacaran' | 'Tunangan' | 'Menikah' | 'LDR'
+  focus: string     // first-week focus option
+}
+
 export interface MoodEntry {
   id: string
   date: string       // YYYY-MM-DD
@@ -380,6 +387,13 @@ interface MockStore {
   commitments: Commitment[]
   activeWeeklyStep: number
 
+  // Premium
+  isPremium: boolean
+  // Relationship context (set during onboarding)
+  relationshipContext: RelationshipContext | null
+  // Achievement/milestone IDs
+  achievements: string[]
+
   // ── Actions ──────────────────────────────────────────────
   setPartnerAName: (name: string) => void
   joinAsPartnerB: (name: string) => void
@@ -403,6 +417,10 @@ interface MockStore {
 
   setActiveWeeklyStep: (step: number) => void
 
+  setPremium: (val: boolean) => void
+  setRelationshipContext: (ctx: RelationshipContext) => void
+  unlockAchievement: (id: string) => void
+
   reset: () => void
 }
 
@@ -419,6 +437,10 @@ function createInitialState() {
     partnerB: { name: '', joined: false },
     streak: 12, // 12 hari konsisten — lebih impressive untuk demo
     activeWeeklyStep: 0,
+    isPremium: false,
+    relationshipContext: null,
+    // Pre-unlock beberapa achievements untuk demo yang lebih engaging
+    achievements: ['first_mood', 'streak_7', 'first_weekly_ritual'],
     ...dummy,
   }
 }
@@ -519,6 +541,15 @@ export const useMockStore = create<MockStore>()(
         })),
 
       setActiveWeeklyStep: (step) => set({ activeWeeklyStep: step }),
+
+      setPremium: (val) => set({ isPremium: val }),
+      setRelationshipContext: (ctx) => set({ relationshipContext: ctx }),
+      unlockAchievement: (id) =>
+        set((s) => ({
+          achievements: s.achievements.includes(id)
+            ? s.achievements
+            : [...s.achievements, id],
+        })),
 
       // ── Reset ──────────────────────────────────────────
       reset: () => set(createInitialState()),

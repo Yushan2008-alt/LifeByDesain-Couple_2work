@@ -8,7 +8,18 @@ import StoreHydration  from '@/components/StoreHydration'
 export const metadata: Metadata = {
   title: 'LifebyDesign Couple',
   description: 'Investasi intentional untuk hubunganmu — daily journaling, weekly ritual, dan AI-powered communication.',
-  icons: { icon: '/favicon.ico' },
+  icons: { icon: '/favicon.ico', apple: '/icons/icon-192.png' },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'LifebyDesign',
+  },
+  openGraph: {
+    title: 'LifebyDesign Couple',
+    description: 'Investasi intentional untuk hubunganmu.',
+    type: 'website',
+  },
 }
 
 export const viewport: Viewport = {

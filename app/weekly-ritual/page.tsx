@@ -13,7 +13,7 @@ import { today, DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek } from '@/
 import {
   Sparkles, Wand2, Share2, CheckCircle2, Trophy, Heart, ArrowRight,
   ChevronLeft, TrendingUp, Star, Plus, Lightbulb, Target, Check, X,
-  Users, User,
+  Users, User, Lock, Crown,
 } from 'lucide-react'
 
 // ── Shared spring ─────────────────────────────────────────────────────────────
@@ -1305,13 +1305,178 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 const TOTAL_STEPS = 4
 
+// ── Freemium Gate Overlay ─────────────────────────────────────────────────────
+const PREMIUM_PERKS = [
+  { icon: Sparkles, text: 'AI Cooling Off — terjemahkan emosi tanpa drama' },
+  { icon: Target,   text: '360° relationship scoring + gap analysis' },
+  { icon: Trophy,   text: 'Weekly wins celebration & commitment tracker' },
+  { icon: TrendingUp, text: 'Monthly recap dengan trend & milestone badges' },
+]
+
+function FreemiumGate({ onDemo }: { onDemo: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        background: 'rgba(42,24,16,0.55)',
+        backdropFilter: 'blur(12px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1.5rem',
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 32, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 26, delay: 0.1 }}
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          background: 'rgba(255,255,255,0.97)',
+          borderRadius: '2rem',
+          padding: '2rem',
+          boxShadow: '0 32px 80px rgba(42,24,16,0.25)',
+          border: '1px solid rgba(237,213,200,0.6)',
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: '1.25rem',
+            background: 'linear-gradient(135deg,#FFF5E8,#FFE5C0)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.25rem',
+          }}
+        >
+          <Crown size={28} color="#B8956A" />
+        </div>
+
+        <h2
+          style={{
+            fontFamily: 'var(--font-playfair)',
+            fontSize: '1.5rem',
+            fontWeight: 700,
+            color: '#2A1810',
+            marginBottom: '0.375rem',
+          }}
+        >
+          Weekly Ritual — Premium
+        </h2>
+        <p style={{ color: '#8B6B61', fontSize: '0.9rem', lineHeight: 1.65, marginBottom: '1.75rem' }}>
+          Ritual mingguan yang penuh adalah fitur premium. Investasi terbaik untuk hubunganmu.
+        </p>
+
+        {/* Perks list */}
+        <div
+          style={{
+            background: 'rgba(255,245,238,0.6)',
+            borderRadius: '1.25rem',
+            padding: '1.25rem',
+            marginBottom: '1.5rem',
+            textAlign: 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+          }}
+        >
+          {PREMIUM_PERKS.map(({ icon: Icon, text }) => (
+            <div key={text} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '0.5rem',
+                  background: 'rgba(232,132,106,0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Icon size={14} color="#E8846A" />
+              </div>
+              <span style={{ fontSize: '0.875rem', color: '#5A3E38', lineHeight: 1.5, paddingTop: 4 }}>{text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Primary CTA */}
+        <motion.a
+          href="/#harga"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            background: 'linear-gradient(135deg,#E8846A,#F4A0A0)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '1rem',
+            padding: '0.9375rem',
+            fontSize: '0.9375rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            textDecoration: 'none',
+            marginBottom: '0.75rem',
+          }}
+        >
+          <Crown size={16} />
+          Upgrade ke Premium — Rp 49k/bln
+        </motion.a>
+
+        {/* Demo CTA */}
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={onDemo}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            background: 'transparent',
+            color: '#8B6B61',
+            border: '1.5px solid rgba(237,213,200,0.8)',
+            borderRadius: '1rem',
+            padding: '0.875rem',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <Sparkles size={14} color="#C4A090" />
+          Coba Demo Premium (testing)
+        </motion.button>
+
+        <p style={{ fontSize: '0.75rem', color: '#C4A090', marginTop: '0.875rem' }}>
+          Demo mode aktif untuk evaluasi produk. Tidak ada commitment.
+        </p>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export default function WeeklyRitualPage() {
   const router = useRouter()
-  const { partnerA, partnerB, activeWeeklyStep, setActiveWeeklyStep } = useMockStore(useShallow((s) => ({
+  const { partnerA, partnerB, activeWeeklyStep, setActiveWeeklyStep, isPremium, setPremium } = useMockStore(useShallow((s) => ({
     partnerA:            s.partnerA,
     partnerB:            s.partnerB,
     activeWeeklyStep:    s.activeWeeklyStep,
     setActiveWeeklyStep: s.setActiveWeeklyStep,
+    isPremium:           s.isPremium,
+    setPremium:          s.setPremium,
   })))
 
   const [step, setStep]     = useState(activeWeeklyStep)
@@ -1343,7 +1508,9 @@ export default function WeeklyRitualPage() {
   const PAGE_OUT = { opacity: 0, x: direction > 0 ? -40 : 40,  scale: 0.97 }
 
   return (
-    <div className="bg-spring" style={{ minHeight: '100dvh', padding: '1.5rem 1rem 3rem' }}>
+    <div className="bg-spring" style={{ minHeight: '100dvh', padding: '1.5rem 1rem 3rem', position: 'relative' }}>
+      {/* Freemium gate — renders on top if not premium */}
+      {!isPremium && <FreemiumGate onDemo={() => setPremium(true)} />}
       <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
         {/* Top bar */}
