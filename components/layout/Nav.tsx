@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMockStore } from '@/store/mockStore'
-import { Home, CalendarCheck, Flame } from 'lucide-react'
+import { Home, CalendarCheck, Flame, CreditCard } from 'lucide-react'
+import { isPartnerActiveToday, streakRiskStatus, today } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { href: '/dashboard',     label: 'Daily',  icon: Home },
   { href: '/weekly-ritual', label: 'Weekly', icon: CalendarCheck },
+  { href: '/pricing', label: 'Pricing', icon: CreditCard },
 ]
 
 export default function Nav() {
@@ -16,9 +18,16 @@ export default function Nav() {
   const partnerA = useMockStore((s) => s.partnerA)
   const partnerB = useMockStore((s) => s.partnerB)
   const streak   = useMockStore((s) => s.streak)
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const habits = useMockStore((s) => s.habits)
 
   const bothJoined = partnerA.joined && partnerB.joined
   if (!bothJoined || pathname === '/onboarding') return null
+
+  const todayDate = today()
+  const activeA = isPartnerActiveToday({ partner: 'A', todayDate, moodHistory, habits })
+  const activeB = isPartnerActiveToday({ partner: 'B', todayDate, moodHistory, habits })
+  const risk = streakRiskStatus({ todayDate, moodHistory, habits })
 
   return (
     <header
@@ -80,21 +89,44 @@ export default function Nav() {
         })}
       </nav>
 
-      {/* Streak pill */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.375rem',
-          background: 'linear-gradient(135deg,#FFF5EE,#FFE8D6)',
-          border: '1px solid rgba(232,132,106,0.2)',
-          borderRadius: '2rem',
-          padding: '0.375rem 0.875rem',
-        }}
-      >
-        <Flame size={13} color="#E8846A" />
-        <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#E8846A' }}>{streak}</span>
-        <span style={{ fontSize: '0.75rem', color: '#C4A090', fontWeight: 400 }}>days</span>
+      {/* Streak + partner activity */}
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.375rem',
+            background: 'linear-gradient(135deg,#FFF5EE,#FFE8D6)',
+            border: '1px solid rgba(232,132,106,0.2)',
+            borderRadius: '2rem',
+            padding: '0.375rem 0.875rem',
+          }}
+        >
+          <Flame size={13} color="#E8846A" />
+          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#E8846A' }}>{streak}</span>
+          <span style={{ fontSize: '0.75rem', color: '#C4A090', fontWeight: 400 }}>days</span>
+          {risk === 'at-risk' && (
+            <span style={{ fontSize: '0.7rem', color: '#C07070', fontWeight: 700 }}>• at risk</span>
+          )}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            padding: '0.28rem 0.55rem',
+            borderRadius: '999px',
+            border: '1px solid rgba(123,174,127,0.28)',
+            background: 'rgba(123,174,127,0.1)',
+            fontSize: '0.7rem',
+            color: '#3D7A43',
+            fontWeight: 600,
+          }}
+          title="Status aktivitas hari ini"
+        >
+          <span>{activeA ? 'A✓' : 'A•'}</span>
+          <span>{activeB ? 'B✓' : 'B•'}</span>
+        </div>
       </div>
     </header>
   )

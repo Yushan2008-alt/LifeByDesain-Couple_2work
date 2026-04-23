@@ -3,6 +3,7 @@
 import { useMockStore } from '@/store/mockStore'
 import { useRouter } from 'next/navigation'
 import { RotateCcw } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Footer() {
   const reset  = useMockStore((s) => s.reset)
@@ -32,41 +33,57 @@ export default function Footer() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <span style={{ fontSize: '1rem' }}>🌸</span>
         <span style={{ fontSize: '0.8rem', color: '#C4A090', fontFamily: 'var(--font-dm-sans)' }}>
-          LifebyDesign Couple — MVP Demo
+          LifebyDesign Couple — intentional relationship growth
         </span>
       </div>
 
-      <button
-        onClick={handleReset}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.375rem',
-          background: 'rgba(237,213,200,0.4)',
-          color: '#8B6B61',
-          border: '1px solid rgba(237,213,200,0.8)',
-          borderRadius: '0.625rem',
-          padding: '0.5rem 1rem',
-          fontSize: '0.8125rem',
-          fontWeight: 500,
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          fontFamily: 'var(--font-dm-sans)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(232,132,106,0.12)'
-          e.currentTarget.style.color = '#E8846A'
-          e.currentTarget.style.borderColor = 'rgba(232,132,106,0.4)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(237,213,200,0.4)'
-          e.currentTarget.style.color = '#8B6B61'
-          e.currentTarget.style.borderColor = 'rgba(237,213,200,0.8)'
-        }}
-      >
-        <RotateCcw size={13} />
-        Reset Dummy Data
-      </button>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <Link
+          href="/privacy"
+          style={{
+            fontSize: '0.78rem',
+            color: '#8B6B61',
+            textDecoration: 'none',
+            border: '1px solid rgba(237,213,200,0.8)',
+            borderRadius: '0.625rem',
+            padding: '0.4rem 0.75rem',
+            background: 'rgba(255,255,255,0.7)',
+          }}
+        >
+          Privacy & Data Use
+        </Link>
+        <button
+          onClick={handleReset}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.375rem',
+            background: 'rgba(237,213,200,0.4)',
+            color: '#8B6B61',
+            border: '1px solid rgba(237,213,200,0.8)',
+            borderRadius: '0.625rem',
+            padding: '0.5rem 1rem',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            fontFamily: 'var(--font-dm-sans)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(232,132,106,0.12)'
+            e.currentTarget.style.color = '#E8846A'
+            e.currentTarget.style.borderColor = 'rgba(232,132,106,0.4)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(237,213,200,0.4)'
+            e.currentTarget.style.color = '#8B6B61'
+            e.currentTarget.style.borderColor = 'rgba(237,213,200,0.8)'
+          }}
+        >
+          <RotateCcw size={13} />
+          Reset Dummy Data
+        </button>
+      </div>
     </footer>
   )
 }

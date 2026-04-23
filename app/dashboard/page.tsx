@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMockStore, type MoodEmoji, type MoodTag, type TodoCategory } from '@/store/mockStore'
-import { today, CATEGORY_CONFIG, INTENSITY_LABELS, habitCompletionThisWeek } from '@/lib/utils'
+import { today, CATEGORY_CONFIG, INTENSITY_LABELS, habitCompletionThisWeek, streakRiskStatus } from '@/lib/utils'
+import { useAnalytics } from '@/lib/analytics'
+import { PREMIUM_UNLOCK_TARGET } from '@/lib/pricing'
 import {
   Flame, Plus, Trash2, CheckCircle2, Circle, CalendarCheck, Heart,
-  MessageCircle, ChevronRight, Sparkles, Tag,
+  MessageCircle, ChevronRight, Sparkles, Tag, BellRing,
 } from 'lucide-react'
 
 // ── Spring variant ────────────────────────────────────────────────────────────
@@ -20,6 +22,9 @@ function StreakBadge() {
   const streak = useMockStore((s) => s.streak)
   const partnerA = useMockStore((s) => s.partnerA)
   const partnerB = useMockStore((s) => s.partnerB)
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const habits = useMockStore((s) => s.habits)
+  const riskStatus = streakRiskStatus({ todayDate: today(), moodHistory, habits })
 
   return (
     <motion.div
@@ -50,6 +55,11 @@ function StreakBadge() {
           <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '2.5rem', fontWeight: 700, lineHeight: 1 }}>{streak}</span>
           <span style={{ fontSize: '0.875rem', opacity: 0.85 }}>hari berturut-turut</span>
         </div>
+        {riskStatus === 'at-risk' && (
+          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', opacity: 0.95 }}>
+            ⚠️ Streak at risk — salah satu partner belum engage hari ini (buffer 1 hari).
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
@@ -107,6 +117,8 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
   const [intensity, setIntensity] = useState(3)
   const [tags, setTags] = useState<MoodTag[]>([])
   const [saved, setSaved] = useState(false)
+  const coupleId = useMockStore((s) => s.coupleId)
+  const { trackOnce } = useAnalytics()
 
   const todayEntries = moodHistory.filter((m) => m.date === today() && m.partner === activePartner)
   const latestToday  = todayEntries[todayEntries.length - 1]
@@ -128,6 +140,7 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
     const d = new Date()
     const DAY_LABELS = ['Min','Sen','Sel','Rab','Kam','Jum','Sab']
     addMoodEntry({ date: today(), dayLabel: DAY_LABELS[d.getDay()], emoji: selected, intensity, tags, partner: activePartner })
+    trackOnce('first_mood_logged', { coupleId, source: 'dashboard_mood_tracker', partner: activePartner })
     setSaved(true)
     setTimeout(() => { setSaved(false); setSelected(null); setTags([]) }, 2000)
   }
@@ -144,6 +157,11 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
       </div>
 
       {/* 7-day sparkline */}
+      {!latestToday && (
+        <p style={{ fontSize: '0.78rem', color: '#8B6B61' }}>
+          Belum ada mood hari ini. Mulai dari satu tap emoji untuk aktivasi harian ✨
+        </p>
+      )}
       <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         {days.map(({ date, entry }, i) => {
           const h = entry ? (entry.intensity / 5) * 36 + 8 : 8
@@ -277,6 +295,74 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+function PremiumTrialCTA() {
+  const router = useRouter()
+  const trialStarted = useMockStore((s) => s.trialStarted)
+  const weeklyCompletions = useMockStore((s) => s.weeklyCompletions)
+  const coupleId = useMockStore((s) => s.coupleId)
+  const { track } = useAnalytics()
+
+  if (trialStarted) return null
+
+  return (
+    <div
+      style={{
+        background: 'linear-gradient(135deg,#FFF5EE,#FFE8D6)',
+        borderRadius: '1.25rem',
+        border: '1px solid rgba(232,132,106,0.25)',
+        padding: '1rem 1.1rem',
+        display: 'grid',
+        gap: '0.65rem',
+      }}
+    >
+      <div>
+        <div style={{ fontSize: '0.72rem', color: '#C07070', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>
+          Revenue Mode
+        </div>
+        <div style={{ fontFamily: 'var(--font-playfair)', color: '#2A1810', fontSize: '1.05rem', fontWeight: 700 }}>
+          Mulai Free Trial 7 hari
+        </div>
+        <p style={{ color: '#8B6B61', fontSize: '0.83rem', marginTop: '0.2rem' }}>
+          Lanjutkan ke premium insight. Progress ritual kamu: <strong>{weeklyCompletions}/{PREMIUM_UNLOCK_TARGET}</strong>.
+        </p>
+      </div>
+      <button
+        className="btn-primary"
+        style={{ justifyContent: 'center' }}
+        onClick={() => {
+          track('subscribe_clicked', { source: 'dashboard_sticky_cta', coupleId, weeklyCompletions })
+          router.push('/pricing')
+        }}
+      >
+        Mulai Free Trial 7 hari
+      </button>
+    </div>
+  )
+}
+
+function ReminderOptInCard() {
+  const reminderOptIn = useMockStore((s) => s.reminderOptIn)
+  const setReminderOptIn = useMockStore((s) => s.setReminderOptIn)
+
+  return (
+    <div className="card" style={{ display: 'grid', gap: '0.6rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#2A1810', fontWeight: 700, fontSize: '0.9rem' }}>
+        <BellRing size={14} color="#7BAE7F" /> Reminder personal
+      </div>
+      <p style={{ fontSize: '0.82rem', color: '#8B6B61', lineHeight: 1.6 }}>
+        Mau diingatkan dengan lembut saat kamu belum sempat check-in? Kami kirim pengingat personal (email/push placeholder).
+      </p>
+      <button
+        className={reminderOptIn ? 'btn-secondary' : 'btn-primary'}
+        style={{ justifyContent: 'center' }}
+        onClick={() => setReminderOptIn(!reminderOptIn)}
+      >
+        {reminderOptIn ? 'Pengingat aktif ✓' : 'Aktifkan reminder personal'}
+      </button>
     </div>
   )
 }
@@ -797,6 +883,7 @@ export default function DashboardPage() {
 
         {/* — Streak ────────────────────────────────────────────── */}
         <StreakBadge />
+        <PremiumTrialCTA />
 
         {/* — Partner status ──────────────────────────────────── */}
         <PartnerStatus activePartner={activePartner} />
@@ -819,6 +906,10 @@ export default function DashboardPage() {
         {/* — Emotion dump ─────────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.25 }}>
           <EmotionDumpWidget activePartner={activePartner} />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.27 }}>
+          <ReminderOptInCard />
         </motion.div>
 
         {/* — CTA to Weekly Ritual ──────────────────────────────── */}

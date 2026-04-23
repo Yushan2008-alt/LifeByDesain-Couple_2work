@@ -73,6 +73,14 @@ export interface WeeklyWin {
   partner: 'A' | 'B'
 }
 
+export type ScoreVector = {
+  communication: number
+  intimacy: number
+  support: number
+  fun: number
+  effort: number
+}
+
 // ============================================================
 // HELPERS — generate dates relative to today
 // ============================================================
@@ -235,6 +243,13 @@ interface MockStore {
   scores: Score360[]
   wins: WeeklyWin[]
   activeWeeklyStep: number
+  weeklyCompletions: number
+  trialStarted: boolean
+  reminderOptIn: boolean
+  baseline360: {
+    partnerA: ScoreVector
+    partnerB: ScoreVector
+  } | null
 
   // ── Actions ──────────────────────────────────────────────
   setPartnerAName: (name: string) => void
@@ -252,6 +267,10 @@ interface MockStore {
   upsertScore: (score: Omit<Score360, 'id'>) => void
   addWin: (text: string, type: WeeklyWin['type'], partner: 'A' | 'B') => void
   setActiveWeeklyStep: (step: number) => void
+  incrementWeeklyCompletions: () => void
+  startTrial: () => void
+  setReminderOptIn: (value: boolean) => void
+  setBaseline360: (value: { partnerA: ScoreVector; partnerB: ScoreVector } | null) => void
 
   reset: () => void
 }
@@ -269,6 +288,10 @@ function createInitialState() {
     partnerB: { name: '', joined: false },
     streak: 5,
     activeWeeklyStep: 0,
+    weeklyCompletions: 1,
+    trialStarted: false,
+    reminderOptIn: false,
+    baseline360: null,
     ...dummy,
   }
 }
@@ -347,13 +370,17 @@ export const useMockStore = create<MockStore>()(
         set((s) => ({ wins: [...s.wins, { id: 'w' + Date.now(), text, type, partner }] })),
 
       setActiveWeeklyStep: (step) => set({ activeWeeklyStep: step }),
+      incrementWeeklyCompletions: () => set((s) => ({ weeklyCompletions: s.weeklyCompletions + 1 })),
+      startTrial: () => set({ trialStarted: true }),
+      setReminderOptIn: (value) => set({ reminderOptIn: value }),
+      setBaseline360: (value) => set({ baseline360: value }),
 
       // ── Reset ──────────────────────────────────────────
       reset: () => set(createInitialState()),
     }),
     {
       name: 'lifebydesign-mock-store',
-      version: 1,
+      version: 3,
       // Prevent SSR from touching localStorage — rehydrate manually client-side
       skipHydration: true,
     }

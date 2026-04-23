@@ -8,7 +8,11 @@ import StoreHydration  from '@/components/StoreHydration'
 export const metadata: Metadata = {
   title: 'LifebyDesign Couple',
   description: 'Investasi intentional untuk hubunganmu — daily journaling, weekly ritual, dan AI-powered communication.',
-  icons: { icon: '/favicon.ico' },
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: ['/favicon.ico', '/icons/icon-192.png'],
+    apple: '/icons/icon-192.png',
+  },
 }
 
 export const viewport: Viewport = {

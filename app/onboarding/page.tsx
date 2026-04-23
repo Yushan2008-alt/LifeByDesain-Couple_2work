@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMockStore } from '@/store/mockStore'
 import { Copy, Check, Heart, Link2, Sparkles, ArrowRight } from 'lucide-react'
+import { DIMENSIONS, DIMENSION_LABELS } from '@/lib/utils'
+import { useAnalytics } from '@/lib/analytics'
 
 // ── Framer Motion variants ────────────────────────────────────────────────────
 const PAGE_IN  = { opacity: 0, x: 40, scale: 0.97 }
@@ -90,6 +92,9 @@ function Step1PartnerA({ onNext }: { onNext: () => void }) {
       </h1>
       <p style={{ color: '#8B6B61', fontSize: '1rem', marginBottom: '2.5rem', lineHeight: 1.6 }}>
         Siapa namamu? Pasanganmu akan melihat nama ini.
+      </p>
+      <p style={{ marginTop: '-1.6rem', marginBottom: '1.4rem', fontSize: '0.78rem', color: '#C4A090' }}>
+        ⏱️ {'<'}3 menit sampai terhubung
       </p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -357,9 +362,73 @@ function Step3PartnerB({ onNext }: { onNext: () => void }) {
 }
 
 // ============================================================
-// STEP 4 — Connected! 🎉
+// STEP 4 — Optional baseline 360
 // ============================================================
-function Step4Connected({ onFinish }: { onFinish: () => void }) {
+function BaselineOptionalStep({ onNext }: { onNext: () => void }) {
+  const setBaseline360 = useMockStore((s) => s.setBaseline360)
+  const [showForm, setShowForm] = useState(false)
+  const [scoresA, setScoresA] = useState({ communication: 7, intimacy: 7, support: 7, fun: 7, effort: 7 })
+  const [scoresB, setScoresB] = useState({ communication: 7, intimacy: 7, support: 7, fun: 7, effort: 7 })
+
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '2.8rem', marginBottom: '1rem' }}>📊</div>
+      <h2
+        style={{
+          fontFamily: 'var(--font-playfair)',
+          fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+          fontWeight: 700,
+          color: '#2A1810',
+          marginBottom: '0.5rem',
+        }}
+      >
+        Baseline 360 (Opsional)
+      </h2>
+      <p style={{ color: '#8B6B61', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1rem' }}>
+        Supaya growth kalian bisa diukur sejak awal, kalian bisa isi baseline score sekarang.
+      </p>
+      <button className="btn-secondary" onClick={() => setShowForm((v) => !v)} style={{ justifyContent: 'center', width: '100%', marginBottom: '0.8rem' }}>
+        {showForm ? 'Sembunyikan form baseline' : 'Isi baseline sekarang'}
+      </button>
+      {showForm && (
+        <div style={{ display: 'grid', gap: '0.65rem', textAlign: 'left', marginBottom: '1rem' }}>
+          <div style={{ fontSize: '0.8rem', color: '#E8846A', fontWeight: 700 }}>Partner A</div>
+          {DIMENSIONS.map((dim) => (
+            <label key={`a-${dim}`} style={{ display: 'grid', gap: '0.2rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#5A3E37' }}>{DIMENSION_LABELS[dim]}</span>
+              <input type="range" min={1} max={10} value={scoresA[dim]} onChange={(e) => setScoresA((prev) => ({ ...prev, [dim]: +e.target.value }))} style={{ width: '100%', accentColor: '#E8846A' }} />
+            </label>
+          ))}
+          <div style={{ fontSize: '0.8rem', color: '#3D7A43', fontWeight: 700, marginTop: '0.35rem' }}>Partner B</div>
+          {DIMENSIONS.map((dim) => (
+            <label key={`b-${dim}`} style={{ display: 'grid', gap: '0.2rem' }}>
+              <span style={{ fontSize: '0.75rem', color: '#5A3E37' }}>{DIMENSION_LABELS[dim]}</span>
+              <input type="range" min={1} max={10} value={scoresB[dim]} onChange={(e) => setScoresB((prev) => ({ ...prev, [dim]: +e.target.value }))} style={{ width: '100%', accentColor: '#7BAE7F' }} />
+            </label>
+          ))}
+          <button
+            className="btn-primary"
+            style={{ justifyContent: 'center', marginTop: '0.5rem' }}
+            onClick={() => {
+              setBaseline360({ partnerA: scoresA, partnerB: scoresB })
+              onNext()
+            }}
+          >
+            Simpan baseline & lanjut
+          </button>
+        </div>
+      )}
+      <button className="btn-ghost" onClick={() => { setBaseline360(null); onNext() }} style={{ justifyContent: 'center', width: '100%' }}>
+        Lewati dulu (tetap optional)
+      </button>
+    </div>
+  )
+}
+
+// ============================================================
+// STEP 5 — Connected! 🎉
+// ============================================================
+function ConnectedStep({ onFinish }: { onFinish: () => void }) {
   const partnerA = useMockStore((s) => s.partnerA)
   const partnerB = useMockStore((s) => s.partnerB)
   const streak = useMockStore((s) => s.streak)
@@ -494,12 +563,14 @@ function Step4Connected({ onFinish }: { onFinish: () => void }) {
 // ============================================================
 // PAGE — Onboarding shell
 // ============================================================
-const STEPS = 4
+const STEPS = 5
 
 export default function OnboardingPage() {
   const router = useRouter()
   const partnerA = useMockStore((s) => s.partnerA)
   const partnerB = useMockStore((s) => s.partnerB)
+  const coupleId = useMockStore((s) => s.coupleId)
+  const { trackOnce } = useAnalytics()
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState(1)
 
@@ -516,6 +587,7 @@ export default function OnboardingPage() {
   }
 
   function goToDashboard() {
+    trackOnce('onboarding_completed', { source: 'onboarding_finish', coupleId })
     router.push('/dashboard')
   }
 
@@ -571,7 +643,8 @@ export default function OnboardingPage() {
             {step === 0 && <Step1PartnerA onNext={goNext} />}
             {step === 1 && <Step2Invite onNext={goNext} />}
             {step === 2 && <Step3PartnerB onNext={goNext} />}
-            {step === 3 && <Step4Connected onFinish={goToDashboard} />}
+            {step === 3 && <BaselineOptionalStep onNext={goNext} />}
+            {step === 4 && <ConnectedStep onFinish={goToDashboard} />}
           </motion.div>
         </AnimatePresence>
       </motion.div>

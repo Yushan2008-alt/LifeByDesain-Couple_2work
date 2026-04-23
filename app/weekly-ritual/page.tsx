@@ -9,9 +9,11 @@ import {
 } from 'recharts'
 import { useMockStore, simulateAIRefine } from '@/store/mockStore'
 import { today, DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek, type Dimension } from '@/lib/utils'
+import { useAnalytics } from '@/lib/analytics'
+import TemplateLibrarySheet from '@/components/modals/TemplateLibrarySheet'
 import {
   Sparkles, Wand2, Share2, CheckCircle2, Trophy, Heart, ArrowRight,
-  ChevronLeft, TrendingUp, Star, Plus,
+  ChevronLeft, TrendingUp, Star, Plus, BookOpen,
 } from 'lucide-react'
 
 // ── Shared ──────────────────────────────────────────────────────────────────
@@ -75,6 +77,19 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
 
   // Pending emotion dumps
   const pendingDumps = emotionDumps.filter((e) => !e.shared && !e.refinedText)
+  const [openTemplates, setOpenTemplates] = useState(false)
+
+  const weekMoodEntries = moodHistory.filter((m) => weekDates.includes(m.date))
+  const avgMood = weekMoodEntries.length
+    ? Math.round((weekMoodEntries.reduce((sum, m) => sum + m.intensity, 0) / weekMoodEntries.length) * 10) / 10
+    : 0
+  const lowMoodCount = weekMoodEntries.filter((m) => m.intensity <= 2).length
+  const avgHabit = Math.round((avgA + avgB) / 2)
+  const weeklyInsight = lowMoodCount >= 3
+    ? 'Minggu ini ada pola energi menurun di beberapa hari. Coba jadwalkan micro-check-in 10 menit di tengah minggu.'
+    : avgHabit >= 65
+      ? 'Konsistensi habit kalian tinggi. Ini momentum bagus untuk lanjut ke ritual quality time mingguan.'
+      : 'Konsistensi habit masih bisa ditingkatkan. Fokus satu kebiasaan inti berdua minggu depan.'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -192,6 +207,20 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
         </motion.div>
       )}
 
+      <div className="card" style={{ padding: '1.15rem', display: 'grid', gap: '0.6rem' }}>
+        <div style={{ fontSize: '0.75rem', color: '#C4A090', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          Weekly Insight (Self-suggestion)
+        </div>
+        <div style={{ fontSize: '0.9rem', color: '#2A1810', lineHeight: 1.65 }}>{weeklyInsight}</div>
+        <div style={{ fontSize: '0.78rem', color: '#8B6B61' }}>
+          Rata-rata mood: <strong>{avgMood || '-'}</strong>/5 · Habit completion: <strong>{avgHabit}%</strong>
+        </div>
+      </div>
+
+      <button className="btn-secondary" onClick={() => setOpenTemplates(true)} style={{ justifyContent: 'center' }}>
+        <BookOpen size={14} /> Buka Template Library
+      </button>
+
       <motion.button
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.97 }}
@@ -201,6 +230,7 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
       >
         Lanjut ke Emotion Translation <ArrowRight size={16} />
       </motion.button>
+      <TemplateLibrarySheet open={openTemplates} onClose={() => setOpenTemplates(false)} />
     </div>
   )
 }
@@ -248,6 +278,9 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
         </h2>
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
           Emosi mentah diubah jadi bahasa yang clear, jujur, dan non-accusatory. Kamu review dulu sebelum share ke pasangan.
+        </p>
+        <p style={{ fontSize: '0.78rem', color: '#C4A090', marginTop: '0.35rem' }}>
+          Why this matters: jeda reflektif kecil ini terbukti menurunkan konflik reaktif.
         </p>
       </div>
 
@@ -497,11 +530,13 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
 
   const [selfA, setSelfA] = useState(existingA?.self ?? { ...DEFAULT_SCORES })
   const [selfB, setSelfB] = useState(existingB?.self ?? { ...DEFAULT_SCORES })
+  const [perceivedA, setPerceivedA] = useState(existingA?.perceived ?? { ...DEFAULT_SCORES })
+  const [perceivedB, setPerceivedB] = useState(existingB?.perceived ?? { ...DEFAULT_SCORES })
   const [saved, setSaved]  = useState(false)
 
   function handleSave() {
-    upsertScore({ week: WEEK, partner: 'A', self: selfA, perceived: { ...DEFAULT_SCORES } })
-    upsertScore({ week: WEEK, partner: 'B', self: selfB, perceived: { ...DEFAULT_SCORES } })
+    upsertScore({ week: WEEK, partner: 'A', self: selfA, perceived: perceivedA })
+    upsertScore({ week: WEEK, partner: 'B', self: selfB, perceived: perceivedB })
     setSaved(true)
   }
 
@@ -510,8 +545,6 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
     dimension: DIMENSION_LABELS[dim],
     [partnerA.name || 'Partner A']: selfA[dim],
     [partnerB.name || 'Partner B']: selfB[dim],
-    // also include last week for gap analysis
-    'Minggu Lalu (A)': scores.find((s) => s.week === 'W-prev' && s.partner === 'A')?.self[dim] ?? 7,
   }))
 
   return (
@@ -522,6 +555,9 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
         </h2>
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
           Masing-masing kasih skor untuk 5 dimensi hubungan. Gap antar skor = insight berharga.
+        </p>
+        <p style={{ fontSize: '0.78rem', color: '#C4A090', marginTop: '0.35rem' }}>
+          Why this matters: bukan sekadar nilaimu, tapi juga akurasi memahami pasangan.
         </p>
       </div>
 
@@ -602,6 +638,38 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
         ))}
       </div>
 
+      {/* Perceived Partner Scores */}
+      <div className="card" style={{ padding: '1.25rem', display: 'grid', gap: '1rem' }}>
+        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#2A1810' }}>Perceived Partner View</h4>
+        <p style={{ fontSize: '0.78rem', color: '#8B6B61' }}>
+          Isi prediksimu: menurutmu pasangan menilai hubungan kalian berapa?
+        </p>
+        <div style={{ display: 'grid', gap: '0.85rem' }}>
+          <div style={{ display: 'grid', gap: '0.65rem' }}>
+            <div style={{ fontSize: '0.82rem', color: '#E8846A', fontWeight: 700 }}>{partnerA.name || 'Partner A'} memprediksi {partnerB.name || 'Partner B'}</div>
+            {DIMENSIONS.map((dim) => (
+              <ScoreSlider
+                key={`perceived-a-${dim}`}
+                label={DIMENSION_LABELS[dim]}
+                value={perceivedA[dim]}
+                onChange={(v) => setPerceivedA((prev) => ({ ...prev, [dim]: v }))}
+              />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gap: '0.65rem' }}>
+            <div style={{ fontSize: '0.82rem', color: '#3D7A43', fontWeight: 700 }}>{partnerB.name || 'Partner B'} memprediksi {partnerA.name || 'Partner A'}</div>
+            {DIMENSIONS.map((dim) => (
+              <ScoreSlider
+                key={`perceived-b-${dim}`}
+                label={DIMENSION_LABELS[dim]}
+                value={perceivedB[dim]}
+                onChange={(v) => setPerceivedB((prev) => ({ ...prev, [dim]: v }))}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Gap analysis */}
       <div className="card" style={{ padding: '1.25rem' }}>
         <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
@@ -609,27 +677,31 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {DIMENSIONS.map((dim) => {
-            const gap  = Math.abs(selfA[dim] - selfB[dim])
-            const max  = Math.max(selfA[dim], selfB[dim])
-            const who  = selfA[dim] > selfB[dim] ? partnerA.name || 'A' : partnerB.name || 'B'
+            // gapAtoB = accuracy of A predicting B's self-score on this dimension.
+            // gapBtoA = accuracy of B predicting A's self-score on this dimension.
+            const gapAtoB = Math.abs(perceivedA[dim] - selfB[dim])
+            const gapBtoA = Math.abs(perceivedB[dim] - selfA[dim])
+            const max = Math.max(gapAtoB, gapBtoA)
             return (
-              <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <span style={{ fontSize: '0.8rem', color: '#5A3E37', width: 90, flexShrink: 0 }}>{DIMENSION_LABELS[dim]}</span>
-                <div style={{ flex: 1, height: 6, background: '#EDD5C8', borderRadius: 3, overflow: 'hidden' }}>
-                  <motion.div
-                    animate={{ width: `${(max / 10) * 100}%` }}
-                    transition={SPRING}
-                    style={{ height: '100%', background: gap > 2 ? '#F4A0A0' : '#7BAE7F', borderRadius: 3 }}
-                  />
+              <div key={dim} style={{ display: 'grid', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.8rem', color: '#5A3E37', fontWeight: 600 }}>{DIMENSION_LABELS[dim]}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <div style={{ flex: 1, height: 6, background: '#EDD5C8', borderRadius: 3, overflow: 'hidden' }}>
+                    <motion.div
+                      animate={{ width: `${(max / 10) * 100}%` }}
+                      transition={SPRING}
+                      style={{ height: '100%', background: max > 2 ? '#F4A0A0' : '#7BAE7F', borderRadius: 3 }}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.72rem', fontWeight: 700, flexShrink: 0,
+                      color: max > 2 ? '#C07070' : '#3D7A43',
+                    }}
+                  >
+                    A→B ±{gapAtoB} · B→A ±{gapBtoA}
+                  </span>
                 </div>
-                <span
-                  style={{
-                    fontSize: '0.7rem', fontWeight: 700, width: 30, textAlign: 'right', flexShrink: 0,
-                    color: gap > 2 ? '#C07070' : '#3D7A43',
-                  }}
-                >
-                  {gap > 0 ? `±${gap}` : '✓'}
-                </span>
               </div>
             )
           })}
@@ -959,6 +1031,10 @@ export default function WeeklyRitualPage() {
   const partnerB = useMockStore((s) => s.partnerB)
   const activeWeeklyStep = useMockStore((s) => s.activeWeeklyStep)
   const setActiveWeeklyStep = useMockStore((s) => s.setActiveWeeklyStep)
+  const incrementWeeklyCompletions = useMockStore((s) => s.incrementWeeklyCompletions)
+  const weeklyCompletions = useMockStore((s) => s.weeklyCompletions)
+  const coupleId = useMockStore((s) => s.coupleId)
+  const { trackOnce } = useAnalytics()
 
   const [step, setStep]       = useState(activeWeeklyStep)
   const [direction, setDir]   = useState(1)
@@ -979,8 +1055,10 @@ export default function WeeklyRitualPage() {
   }
 
   function finish() {
+    incrementWeeklyCompletions()
+    trackOnce('first_weekly_completed', { coupleId, source: 'weekly_ritual_finish', weeklyCompletions: weeklyCompletions + 1 })
     setActiveWeeklyStep(0)
-    router.push('/dashboard')
+    router.push('/weekly-complete')
   }
 
   if (!partnerA.joined || !partnerB.joined) return null
