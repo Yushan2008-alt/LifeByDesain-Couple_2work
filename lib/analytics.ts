@@ -16,6 +16,7 @@
 
 type EventProps = Record<string, string | number | boolean | null | undefined>
 const onceEvents = new Set<string>()
+const MAX_ONCE_EVENTS = 500
 
 function dispatch(name: string, props?: EventProps) {
   if (typeof window === 'undefined') return        // SSR guard
@@ -47,6 +48,7 @@ export function useAnalytics() {
   const trackOnce = (name: string, props?: EventProps) => {
     const key = eventKey(name, props)
     if (onceEvents.has(key)) return
+    if (onceEvents.size >= MAX_ONCE_EVENTS) onceEvents.clear()
     onceEvents.add(key)
     dispatch(name, props)
   }

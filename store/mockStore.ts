@@ -107,6 +107,13 @@ export interface Commitment {
 // HELPERS — generate dates relative to today
 // ============================================================
 
+function generateId(prefix: string) {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}${crypto.randomUUID()}`
+  }
+  return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 function buildDummyData() {
   const today = new Date()
   const DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
@@ -553,20 +560,19 @@ export const useMockStore = create<MockStore>()(
         set((s) => {
           const scoresWithoutBaseline = s.scores.filter((sc) => sc.week !== 'W-baseline')
           if (!baseline) return { scores: scoresWithoutBaseline }
-          const idSeed = Date.now()
 
           return {
             scores: [
               ...scoresWithoutBaseline,
               {
-                id: `s-baseline-${idSeed}-a`,
+                id: generateId('s-baseline-a-'),
                 week: 'W-baseline',
                 partner: 'A',
                 self: baseline.partnerA,
                 perceived: baseline.partnerA,
               },
               {
-                id: `s-baseline-${idSeed}-b`,
+                id: generateId('s-baseline-b-'),
                 week: 'W-baseline',
                 partner: 'B',
                 self: baseline.partnerB,
