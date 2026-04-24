@@ -48,7 +48,10 @@ export function useAnalytics() {
   const trackOnce = (name: string, props?: EventProps) => {
     const key = eventKey(name, props)
     if (onceEvents.has(key)) return
-    if (onceEvents.size >= MAX_ONCE_EVENTS) onceEvents.clear()
+    if (onceEvents.size >= MAX_ONCE_EVENTS) {
+      const oldestKey = onceEvents.values().next().value
+      if (oldestKey) onceEvents.delete(oldestKey)
+    }
     onceEvents.add(key)
     dispatch(name, props)
   }
