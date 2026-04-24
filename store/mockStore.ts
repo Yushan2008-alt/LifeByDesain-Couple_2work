@@ -75,6 +75,8 @@ export interface Score360 {
   }
 }
 
+type BaselineScore = Score360['self']
+
 export interface WeeklyWin {
   id: string
   text: string
@@ -104,6 +106,13 @@ export interface Commitment {
 // ============================================================
 // HELPERS — generate dates relative to today
 // ============================================================
+
+function generateId(prefix: string) {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}${crypto.randomUUID()}`
+  }
+  return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
 
 function buildDummyData() {
   const today = new Date()
@@ -416,6 +425,7 @@ interface MockStore {
   setRefinedText: (id: string, refinedText: string) => void
   shareEmotionDump: (id: string) => void
   upsertScore: (score: Omit<Score360, 'id'>) => void
+  setBaseline360: (baseline: { partnerA: BaselineScore; partnerB: BaselineScore } | null) => void
   addWin: (text: string, type: WeeklyWin['type'], partner: 'A' | 'B') => void
 
   addCommitment: (text: string, partner: Commitment['partner'], createdBy: 'A' | 'B', week: string) => void
@@ -545,6 +555,34 @@ export const useMockStore = create<MockStore>()(
             { ...score, id: 's' + Date.now() },
           ],
         })),
+
+      setBaseline360: (baseline) =>
+        set((s) => {
+          const scoresWithoutBaseline = s.scores.filter((sc) => sc.week !== 'W-baseline')
+          if (!baseline) return { scores: scoresWithoutBaseline }
+
+          return {
+            scores: [
+              ...scoresWithoutBaseline,
+              {
+                id: generateId('s-baseline-a-'),
+                week: 'W-baseline',
+                partner: 'A',
+                self: baseline.partnerA,
+                // Baseline capture only asks self-score, so perceived is intentionally mirrored from self.
+                perceived: baseline.partnerA,
+              },
+              {
+                id: generateId('s-baseline-b-'),
+                week: 'W-baseline',
+                partner: 'B',
+                self: baseline.partnerB,
+                // Baseline capture only asks self-score, so perceived is intentionally mirrored from self.
+                perceived: baseline.partnerB,
+              },
+            ],
+          }
+        }),
 
       addWin: (text, type, partner) =>
         set((s) => ({ wins: [...s.wins, { id: 'w' + Date.now(), text, type, partner, week: 'W-current' }] })),
