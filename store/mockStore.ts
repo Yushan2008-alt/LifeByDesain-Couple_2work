@@ -75,6 +75,8 @@ export interface Score360 {
   }
 }
 
+type BaselineScore = Score360['self']
+
 export interface WeeklyWin {
   id: string
   text: string
@@ -416,6 +418,7 @@ interface MockStore {
   setRefinedText: (id: string, refinedText: string) => void
   shareEmotionDump: (id: string) => void
   upsertScore: (score: Omit<Score360, 'id'>) => void
+  setBaseline360: (baseline: { partnerA: BaselineScore; partnerB: BaselineScore } | null) => void
   addWin: (text: string, type: WeeklyWin['type'], partner: 'A' | 'B') => void
 
   addCommitment: (text: string, partner: Commitment['partner'], createdBy: 'A' | 'B', week: string) => void
@@ -545,6 +548,32 @@ export const useMockStore = create<MockStore>()(
             { ...score, id: 's' + Date.now() },
           ],
         })),
+
+      setBaseline360: (baseline) =>
+        set((s) => {
+          const scoresWithoutBaseline = s.scores.filter((sc) => sc.week !== 'W-baseline')
+          if (!baseline) return { scores: scoresWithoutBaseline }
+
+          return {
+            scores: [
+              ...scoresWithoutBaseline,
+              {
+                id: `s-baseline-a-${Date.now()}`,
+                week: 'W-baseline',
+                partner: 'A',
+                self: baseline.partnerA,
+                perceived: baseline.partnerA,
+              },
+              {
+                id: `s-baseline-b-${Date.now()}`,
+                week: 'W-baseline',
+                partner: 'B',
+                self: baseline.partnerB,
+                perceived: baseline.partnerB,
+              },
+            ],
+          }
+        }),
 
       addWin: (text, type, partner) =>
         set((s) => ({ wins: [...s.wins, { id: 'w' + Date.now(), text, type, partner, week: 'W-current' }] })),

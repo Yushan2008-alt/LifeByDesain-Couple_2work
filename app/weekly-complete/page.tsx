@@ -8,16 +8,16 @@ import { PREMIUM_UNLOCK_TARGET } from '@/lib/pricing'
 
 export default function WeeklyCompletePage() {
   const router = useRouter()
-  const weeklyCompletions = useMockStore((s) => s.weeklyCompletions)
+  const weeklyCompletions = useMockStore((s) => s.weeklyRitualsCompleted)
   const coupleId = useMockStore((s) => s.coupleId)
-  const trialStarted = useMockStore((s) => s.trialStarted)
-  const startTrial = useMockStore((s) => s.startTrial)
+  const trialStarted = useMockStore((s) => s.isPremium)
+  const startTrial = useMockStore((s) => s.setPremium)
   const { track } = useAnalytics()
 
   const progressToPremium = Math.min(100, Math.round((weeklyCompletions / PREMIUM_UNLOCK_TARGET) * 100))
 
   function handleStartTrial() {
-    startTrial()
+    startTrial(true)
     track('trial_started', { source: 'weekly_complete_value_wall', coupleId, weeklyCompletions })
     router.push('/pricing')
   }
