@@ -557,7 +557,6 @@ interface MockStore {
   setPremium: (val: boolean) => void
   startTrial: () => void
   setRelationshipContext: (ctx: RelationshipContext) => void
-  setBaseline360: (data: MockStore['baseline360']) => void
   unlockAchievement: (id: string) => void
   incrementWeeklyRitualsCompleted: () => void
   setReminderOptIn: (channel: 'email' | 'push', val: boolean) => void
@@ -685,9 +684,15 @@ export const useMockStore = create<MockStore>()(
       setBaseline360: (baseline) =>
         set((s) => {
           const scoresWithoutBaseline = s.scores.filter((sc) => sc.week !== 'W-baseline')
-          if (!baseline) return { scores: scoresWithoutBaseline }
+          if (!baseline) {
+            return {
+              baseline360: null,
+              scores: scoresWithoutBaseline,
+            }
+          }
 
           return {
+            baseline360: baseline,
             scores: [
               ...scoresWithoutBaseline,
               {
@@ -757,7 +762,6 @@ export const useMockStore = create<MockStore>()(
       setPremium: (val) => set({ isPremium: val }),
       startTrial: () => set({ isPremium: true, trialStarted: true }),
       setRelationshipContext: (ctx) => set({ relationshipContext: ctx }),
-      setBaseline360: (data) => set({ baseline360: data }),
       unlockAchievement: (id) =>
         set((s) => ({
           achievements: s.achievements.includes(id)
