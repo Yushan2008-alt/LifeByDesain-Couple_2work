@@ -15,6 +15,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 type EventProps = Record<string, string | number | boolean | null | undefined>
+const onceEvents = new Set<string>()
 
 function dispatch(name: string, props?: EventProps) {
   if (typeof window === 'undefined') return        // SSR guard
@@ -32,6 +33,25 @@ function dispatch(name: string, props?: EventProps) {
 
   // ── Mixpanel (uncomment + call mixpanel.init() in layout.tsx) ────────────
   // (window as any).mixpanel?.track(name, props)
+}
+
+function eventKey(name: string, props?: EventProps) {
+  return `${name}:${JSON.stringify(props ?? {})}`
+}
+
+export function useAnalytics() {
+  const track = (name: string, props?: EventProps) => {
+    dispatch(name, props)
+  }
+
+  const trackOnce = (name: string, props?: EventProps) => {
+    const key = eventKey(name, props)
+    if (onceEvents.has(key)) return
+    onceEvents.add(key)
+    dispatch(name, props)
+  }
+
+  return { track, trackOnce }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
