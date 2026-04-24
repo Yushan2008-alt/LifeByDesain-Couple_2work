@@ -553,19 +553,20 @@ export const useMockStore = create<MockStore>()(
         set((s) => {
           const scoresWithoutBaseline = s.scores.filter((sc) => sc.week !== 'W-baseline')
           if (!baseline) return { scores: scoresWithoutBaseline }
+          const idSeed = Date.now()
 
           return {
             scores: [
               ...scoresWithoutBaseline,
               {
-                id: `s-baseline-a-${Date.now()}`,
+                id: `s-baseline-${idSeed}-a`,
                 week: 'W-baseline',
                 partner: 'A',
                 self: baseline.partnerA,
                 perceived: baseline.partnerA,
               },
               {
-                id: `s-baseline-b-${Date.now()}`,
+                id: `s-baseline-${idSeed}-b`,
                 week: 'W-baseline',
                 partner: 'B',
                 self: baseline.partnerB,

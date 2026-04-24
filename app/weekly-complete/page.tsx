@@ -10,14 +10,14 @@ export default function WeeklyCompletePage() {
   const router = useRouter()
   const weeklyCompletions = useMockStore((s) => s.weeklyRitualsCompleted)
   const coupleId = useMockStore((s) => s.coupleId)
-  const trialStarted = useMockStore((s) => s.isPremium)
-  const startTrial = useMockStore((s) => s.setPremium)
+  const isPremium = useMockStore((s) => s.isPremium)
+  const setPremium = useMockStore((s) => s.setPremium)
   const { track } = useAnalytics()
 
   const progressToPremium = Math.min(100, Math.round((weeklyCompletions / PREMIUM_UNLOCK_TARGET) * 100))
 
   function handleStartTrial() {
-    startTrial(true)
+    setPremium(true)
     track('trial_started', { source: 'weekly_complete_value_wall', coupleId, weeklyCompletions })
     router.push('/pricing')
   }
@@ -55,7 +55,7 @@ export default function WeeklyCompletePage() {
           <p style={{ color: '#5A3E37', fontSize: '0.87rem', lineHeight: 1.65 }}>
             Pattern hubungan kamu menunjukkan peluang peningkatan tertinggi di waktu komunikasi pertengahan minggu. Unlock premium untuk melihat rekomendasi spesifik berbasis pola mood + habit.
           </p>
-          {!trialStarted ? (
+          {!isPremium ? (
             <button className="btn-primary" onClick={handleStartTrial} style={{ justifyContent: 'center', marginTop: '0.2rem' }}>
               Mulai Free Trial 7 hari
             </button>
