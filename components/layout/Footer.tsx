@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMockStore } from '@/store/mockStore'
 import { useRouter } from 'next/navigation'
 import { RotateCcw, Crown } from 'lucide-react'
@@ -31,11 +32,18 @@ export default function Footer() {
         flexWrap: 'wrap',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <span style={{ fontSize: '1rem' }}>🌸</span>
-        <span style={{ fontSize: '0.8rem', color: '#C4A090', fontFamily: 'var(--font-dm-sans)' }}>
-          LifebyDesign Couple — MVP Demo
-        </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '1rem' }}>🌸</span>
+          <span style={{ fontSize: '0.8rem', color: '#8B6B61', fontFamily: 'var(--font-dm-sans)', fontWeight: 600 }}>
+            LifebyDesign Couple
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '0.875rem', paddingLeft: '0.125rem' }}>
+          <Link href="/pricing" style={{ fontSize: '0.75rem', color: '#C4A090', textDecoration: 'none', fontFamily: 'var(--font-dm-sans)' }}>Harga</Link>
+          <Link href="/privacy" style={{ fontSize: '0.75rem', color: '#C4A090', textDecoration: 'none', fontFamily: 'var(--font-dm-sans)' }}>Privasi</Link>
+          <Link href="/recap" style={{ fontSize: '0.75rem', color: '#C4A090', textDecoration: 'none', fontFamily: 'var(--font-dm-sans)' }}>Recap</Link>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>

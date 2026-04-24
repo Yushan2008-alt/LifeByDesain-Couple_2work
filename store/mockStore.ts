@@ -393,6 +393,10 @@ interface MockStore {
   relationshipContext: RelationshipContext | null
   // Achievement/milestone IDs
   achievements: string[]
+  // Weekly ritual completion counter (for "progress to premium value" nudge)
+  weeklyRitualsCompleted: number
+  // Reminder opt-in channels
+  reminderOptIn: { email: boolean; push: boolean }
 
   // ── Actions ──────────────────────────────────────────────
   setPartnerAName: (name: string) => void
@@ -400,6 +404,8 @@ interface MockStore {
 
   addMoodEntry: (entry: Omit<MoodEntry, 'id'>) => void
   toggleHabit: (habitId: string, date: string) => void
+  addHabit: (label: string, icon: string, partner: 'A' | 'B') => void
+  removeHabit: (habitId: string) => void
   addTodo: (text: string, category: TodoCategory, createdBy: 'A' | 'B') => void
   toggleTodo: (id: string) => void
   deleteTodo: (id: string) => void
@@ -420,6 +426,8 @@ interface MockStore {
   setPremium: (val: boolean) => void
   setRelationshipContext: (ctx: RelationshipContext) => void
   unlockAchievement: (id: string) => void
+  incrementWeeklyRitualsCompleted: () => void
+  setReminderOptIn: (channel: 'email' | 'push', val: boolean) => void
 
   reset: () => void
 }
@@ -441,6 +449,9 @@ function createInitialState() {
     relationshipContext: null,
     // Pre-unlock beberapa achievements untuk demo yang lebih engaging
     achievements: ['first_mood', 'streak_7', 'first_weekly_ritual'],
+    // 2 rituals completed → user is 1 away from "unlock deep trend" (creates urgency)
+    weeklyRitualsCompleted: 2,
+    reminderOptIn: { email: false, push: false },
     ...dummy,
   }
 }
@@ -477,6 +488,17 @@ export const useMockStore = create<MockStore>()(
             }
           }),
         })),
+
+      addHabit: (label, icon, partner) =>
+        set((s) => ({
+          habits: [
+            ...s.habits,
+            { id: 'h' + Date.now(), label, icon, partner, completedDays: [] },
+          ],
+        })),
+
+      removeHabit: (habitId) =>
+        set((s) => ({ habits: s.habits.filter((h) => h.id !== habitId) })),
 
       addTodo: (text, category, createdBy) =>
         set((s) => ({
@@ -550,6 +572,10 @@ export const useMockStore = create<MockStore>()(
             ? s.achievements
             : [...s.achievements, id],
         })),
+      incrementWeeklyRitualsCompleted: () =>
+        set((s) => ({ weeklyRitualsCompleted: s.weeklyRitualsCompleted + 1 })),
+      setReminderOptIn: (channel, val) =>
+        set((s) => ({ reminderOptIn: { ...s.reminderOptIn, [channel]: val } })),
 
       // ── Reset ──────────────────────────────────────────
       reset: () => set(createInitialState()),

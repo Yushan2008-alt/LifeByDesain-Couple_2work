@@ -11,6 +11,13 @@ const NAV_ITEMS = [
   { href: '/recap',         label: 'Recap',   icon: BarChart2 },
 ]
 
+// Nav items shown to non-paired visitors (landing page)
+const LANDING_NAV_ITEMS = [
+  { href: '/#fitur', label: 'Fitur' },
+  { href: '/pricing', label: 'Harga' },
+  { href: '/privacy', label: 'Privasi' },
+]
+
 export default function Nav() {
   const pathname = usePathname()
   // Separate selectors — never return new objects (causes infinite re-render loop)
@@ -20,7 +27,43 @@ export default function Nav() {
   const isPremium = useMockStore((s) => s.isPremium)
 
   const bothJoined = partnerA.joined && partnerB.joined
-  if (!bothJoined || pathname === '/onboarding') return null
+
+  // On onboarding page — hide nav entirely
+  if (pathname === '/onboarding') return null
+
+  // On root landing page for non-paired users — show minimal landing nav
+  if (!bothJoined && pathname === '/') {
+    return (
+      <header
+        style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          background: 'rgba(255,251,245,0.85)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(237,213,200,0.5)',
+          padding: '0.875rem 1.5rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}
+      >
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontSize: '1.25rem' }}>🌸</span>
+          <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '1rem', fontWeight: 600, color: '#2A1810', letterSpacing: '-0.01em' }}>LifebyDesign</span>
+        </Link>
+        <nav style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+          {LANDING_NAV_ITEMS.map(({ href, label }) => (
+            <Link key={href} href={href} style={{ padding: '0.5rem 0.75rem', borderRadius: '0.75rem', fontSize: '0.875rem', fontWeight: 500, color: '#8B6B61', textDecoration: 'none' }}>
+              {label}
+            </Link>
+          ))}
+          <Link href="/onboarding" className="btn-primary" style={{ textDecoration: 'none', padding: '0.5rem 1rem', fontSize: '0.875rem', marginLeft: '0.25rem' }}>
+            Mulai Gratis
+          </Link>
+        </nav>
+      </header>
+    )
+  }
+
+  // Not paired and not on landing page — hide nav
+  if (!bothJoined) return null
 
   return (
     <header

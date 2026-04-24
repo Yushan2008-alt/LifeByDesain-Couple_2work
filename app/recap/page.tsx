@@ -194,7 +194,7 @@ export default function RecapPage() {
                 >
                   <Icon size={18} color={color} />
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2A1810', lineHeight: 1 }}>{val}</div>
+                <div style={{ fontSize: 'clamp(1.25rem,4vw,1.5rem)', fontWeight: 800, color: '#2A1810', lineHeight: 1 }}>{val}</div>
                 <div style={{ fontSize: '0.75rem', color: '#C4A090', marginTop: '0.25rem', fontWeight: 500 }}>{label}</div>
               </div>
             ))}

@@ -580,7 +580,7 @@ export default function LandingPage() {
                 <div style={{ marginBottom: '1.5rem' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#8B6B61', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Gratis</span>
                   <div style={{ marginTop: '0.5rem' }}>
-                    <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#2A1810' }}>Rp 0</span>
+                    <span style={{ fontSize: 'clamp(1.875rem,5.5vw,2.5rem)', fontWeight: 800, color: '#2A1810' }}>Rp 0</span>
                     <span style={{ color: '#C4A090', fontSize: '0.9rem' }}> / selamanya</span>
                   </div>
                 </div>
@@ -654,7 +654,7 @@ export default function LandingPage() {
                 <div style={{ marginBottom: '1.5rem' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#E8846A', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Premium</span>
                   <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                    <span style={{ fontSize: '2.5rem', fontWeight: 800, color: '#2A1810' }}>Rp 49k</span>
+                    <span style={{ fontSize: 'clamp(1.875rem,5.5vw,2.5rem)', fontWeight: 800, color: '#2A1810' }}>Rp 49k</span>
                     <span style={{ color: '#C4A090', fontSize: '0.9rem' }}> / bulan</span>
                   </div>
                   <p style={{ fontSize: '0.8rem', color: '#C4A090', marginTop: '0.25rem' }}>≈ Rp 1.600/hari — lebih murah dari secangkir kopi</p>

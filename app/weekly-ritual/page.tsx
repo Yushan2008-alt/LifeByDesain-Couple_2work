@@ -10,11 +10,13 @@ import {
 import { useMockStore, simulateAIRefine, generateSelfSuggestion, type Commitment } from '@/store/mockStore'
 import { useShallow } from 'zustand/shallow'
 import { today, DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek } from '@/lib/utils'
+import { analytics } from '@/lib/analytics'
 import {
   Sparkles, Wand2, Share2, CheckCircle2, Trophy, Heart, ArrowRight,
   ChevronLeft, TrendingUp, Star, Plus, Lightbulb, Target, Check, X,
-  Users, User, Lock, Crown,
+  Users, User, Lock, Crown, BookOpen,
 } from 'lucide-react'
+import TemplateLibrary from '@/components/TemplateLibrary'
 
 // ── Shared spring ─────────────────────────────────────────────────────────────
 const SPRING = { type: 'spring', stiffness: 280, damping: 26 } as const
@@ -96,6 +98,7 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
 
   const [showSuggestionA, setShowSuggestionA] = useState(false)
   const [showSuggestionB, setShowSuggestionB] = useState(false)
+  const [showTemplateLib, setShowTemplateLib] = useState(false)
 
   useEffect(() => {
     if (suggestionA) setTimeout(() => setShowSuggestionA(true), 600)
@@ -109,7 +112,7 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div>
-        <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.5rem', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 'clamp(1.25rem,4vw,1.5rem)', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
           Review Minggu Ini 📅
         </h2>
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
@@ -127,7 +130,7 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
         <div>
           <div style={{ fontSize: '0.75rem', color: '#C4A090', marginBottom: '0.125rem' }}>Streak Bersama</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
-            <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '2rem', fontWeight: 700, color: '#E8846A' }}>{streak}</span>
+            <span style={{ fontFamily: 'var(--font-playfair)', fontSize: 'clamp(1.5rem,5vw,2rem)', fontWeight: 700, color: '#E8846A' }}>{streak}</span>
             <span style={{ fontSize: '0.8rem', color: '#C4A090' }}>hari (buffer 1 hari aktif)</span>
           </div>
         </div>
@@ -349,6 +352,26 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
         )}
       </AnimatePresence>
 
+      {/* ── Template Library hint ────────────────────────── */}
+      <button
+        onClick={() => {
+          analytics.templateLibraryOpened('Semua')
+          setShowTemplateLib(true)
+        }}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+          width: '100%', padding: '0.75rem',
+          background: 'rgba(232,132,106,0.06)',
+          border: '1.5px dashed rgba(232,132,106,0.35)',
+          borderRadius: '0.875rem',
+          color: '#E8846A', fontSize: '0.85rem', fontWeight: 600,
+          cursor: 'pointer', transition: 'all 0.2s ease',
+        }}
+      >
+        <BookOpen size={15} />
+        Template Library — 18 prompt siap pakai untuk conversation bermakna
+      </button>
+
       <motion.button
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.97 }}
@@ -358,6 +381,12 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
       >
         Lanjut ke Emotion Translation <ArrowRight size={16} />
       </motion.button>
+
+      {/* Template Library drawer */}
+      <TemplateLibrary
+        isOpen={showTemplateLib}
+        onClose={() => setShowTemplateLib(false)}
+      />
     </div>
   )
 }
@@ -379,7 +408,8 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
   const addEmotionDump        = useMockStore((s) => s.addEmotionDump)
 
   const pendingDumps = emotionDumps.filter((e) => !e.shared)
-  const [refiningId, setRefiningId] = useState<string | null>(null)
+  const [refiningId, setRefiningId]           = useState<string | null>(null)
+  const [showTemplateLib2, setShowTemplateLib2] = useState(false)
 
   function getName(p: 'A' | 'B') {
     return (p === 'A' ? partnerA.name : partnerB.name) || `Partner ${p}`
@@ -403,7 +433,7 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div>
-        <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.5rem', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 'clamp(1.25rem,4vw,1.5rem)', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
           AI Emotion Translation 💌
         </h2>
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
@@ -573,14 +603,32 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
               </button>
             ))}
           </div>
-          <textarea
-            className="input-warm"
-            placeholder="Tulis perasaan mentah... (akan tetap private sampai kamu approve)"
-            value={newRaw}
-            onChange={(e) => setNewRaw(e.target.value)}
-            rows={2}
-            style={{ resize: 'none' }}
-          />
+          <div style={{ position: 'relative' }}>
+            <textarea
+              className="input-warm"
+              placeholder="Tulis perasaan mentah... (akan tetap private sampai kamu approve)"
+              value={newRaw}
+              onChange={(e) => setNewRaw(e.target.value)}
+              rows={3}
+              style={{ resize: 'none', paddingBottom: '2.25rem' }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                analytics.templateLibraryOpened('Semua')
+                setShowTemplateLib2(true)
+              }}
+              style={{
+                position: 'absolute', bottom: '0.5rem', right: '0.625rem',
+                display: 'flex', alignItems: 'center', gap: '0.3rem',
+                background: 'rgba(232,132,106,0.1)', border: '1px solid rgba(232,132,106,0.25)',
+                borderRadius: '0.5rem', padding: '0.25rem 0.625rem',
+                fontSize: '0.72rem', color: '#E8846A', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              <BookOpen size={11} /> Pakai Template
+            </button>
+          </div>
           <button type="submit" className="btn-secondary" disabled={!newRaw.trim()} style={{ justifyContent: 'center' }}>
             <Plus size={14} /> Tambahkan
           </button>
@@ -596,6 +644,13 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
       >
         Lanjut ke 360° Scoring <ArrowRight size={16} />
       </motion.button>
+
+      {/* Template Library drawer */}
+      <TemplateLibrary
+        isOpen={showTemplateLib2}
+        onClose={() => setShowTemplateLib2(false)}
+        onUse={(prompt) => setNewRaw(prompt)}
+      />
     </div>
   )
 }
@@ -680,7 +735,7 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div>
-        <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.5rem', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 'clamp(1.25rem,4vw,1.5rem)', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
           360° Scoring 🎯
         </h2>
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
@@ -937,13 +992,17 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
 // PRD: Celebrate wins, set focus/commitments for next week, close ritual
 // ═══════════════════════════════════════════════════════════════════════════════
 function Step4Wins({ onFinish }: { onFinish: () => void }) {
-  const { wins, addWin, addCommitment, partnerA, partnerB, streak } = useMockStore(useShallow((s) => ({
+  const { wins, addWin, addCommitment, partnerA, partnerB, streak,
+    incrementWeeklyRitualsCompleted, isPremium,
+  } = useMockStore(useShallow((s) => ({
     wins:          s.wins,
     addWin:        s.addWin,
     addCommitment: s.addCommitment,
     partnerA:      s.partnerA,
     partnerB:      s.partnerB,
     streak:        s.streak,
+    incrementWeeklyRitualsCompleted: s.incrementWeeklyRitualsCompleted,
+    isPremium:     s.isPremium,
   })))
 
   const [winText, setWinText]       = useState('')
@@ -956,6 +1015,7 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
   const [commitBy, setCommitBy]           = useState<'A' | 'B'>('A')
   const [showCommitForm, setShowCommitForm] = useState(false)
   const [newCommitments, setNewCommitments] = useState<{ text: string; partner: Commitment['partner'] }[]>([])
+  const [showValueWall, setShowValueWall]   = useState(false)
 
   function getName(p: 'A' | 'B') {
     return (p === 'A' ? partnerA.name : partnerB.name) || `Partner ${p}`
@@ -980,7 +1040,15 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
     newCommitments.forEach((c) => {
       addCommitment(c.text, c.partner, commitBy, 'W-current')
     })
-    onFinish()
+    incrementWeeklyRitualsCompleted()
+    analytics.weeklyRitualCompleted(1) // actual counter from store not needed here
+    if (!isPremium) {
+      // Show value wall before going to dashboard
+      analytics.valueWallSeen()
+      setShowValueWall(true)
+    } else {
+      onFinish()
+    }
   }
 
   const relWins = wins.filter((w) => w.type === 'relationship')
@@ -998,7 +1066,7 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
         >
           🏆
         </motion.div>
-        <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.5rem', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-playfair)', fontSize: 'clamp(1.25rem,4vw,1.5rem)', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
           Celebrate Wins! ✨
         </h2>
         <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.6 }}>
@@ -1296,6 +1364,109 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
             : 'Sampai weekly ritual berikutnya'}
         </span>
       </motion.button>
+
+      {/* ── Value Wall (post-ritual, non-premium) ──────────────── */}
+      <AnimatePresence>
+        {showValueWall && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 300,
+              background: 'rgba(42,24,16,0.6)',
+              backdropFilter: 'blur(12px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '1.5rem',
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 32, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 26, delay: 0.1 }}
+              style={{
+                width: '100%', maxWidth: 400,
+                background: 'rgba(255,255,255,0.98)',
+                borderRadius: '2rem', padding: '2rem',
+                boxShadow: '0 32px 80px rgba(42,24,16,0.25)',
+                border: '1px solid rgba(237,213,200,0.6)',
+                textAlign: 'center',
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.2, 1] }}
+                transition={{ duration: 0.5, times: [0, 0.6, 1] }}
+                style={{ fontSize: '3rem', marginBottom: '1rem' }}
+              >
+                🎉
+              </motion.div>
+              <h3 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.375rem', fontWeight: 700, color: '#2A1810', marginBottom: '0.375rem' }}>
+                Ritual selesai! ✨
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: '#8B6B61', lineHeight: 1.65, marginBottom: '1.25rem' }}>
+                Kamu baru saja investasi waktu yang bermakna untuk hubunganmu.
+              </p>
+
+              {/* Summary stats */}
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                {[
+                  { val: wins.length, label: 'Wins' },
+                  { val: newCommitments.length, label: 'Komitmen' },
+                  { val: streak, label: 'Day streak' },
+                ].map(({ val, label }) => (
+                  <div key={label} style={{ background: 'rgba(255,245,238,0.8)', border: '1px solid rgba(237,213,200,0.6)', borderRadius: '0.75rem', padding: '0.5rem 0.75rem', textAlign: 'center', minWidth: 70 }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#E8846A' }}>{val}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#C4A090' }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Locked insight teaser */}
+              <div style={{
+                background: 'rgba(107,159,212,0.06)', border: '1px dashed rgba(107,159,212,0.3)',
+                borderRadius: '1rem', padding: '0.875rem', marginBottom: '1.25rem', textAlign: 'left',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
+                  <Lock size={13} color="#6B9FD4" />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6B9FD4' }}>AI Insight Premium — Terkunci</span>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#8B6B61', lineHeight: 1.55, filter: 'blur(3px)', userSelect: 'none' }}>
+                  Pola komunikasimu minggu ini menunjukkan peningkatan di dimensi Support (+1.2 dari minggu lalu). Gap antara A dan B paling besar ada di...
+                </p>
+              </div>
+
+              <a
+                href="/pricing"
+                onClick={() => { analytics.upgradeCtaClicked('post_ritual_value_wall') }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  background: 'linear-gradient(135deg,#E8846A,#F4A0A0)',
+                  color: 'white', border: 'none',
+                  borderRadius: '1rem', padding: '0.875rem',
+                  fontSize: '0.9375rem', fontWeight: 700,
+                  textDecoration: 'none', marginBottom: '0.625rem',
+                }}
+              >
+                <Crown size={16} />
+                Unlock Insight — Trial 7 Hari Gratis
+              </a>
+
+              <button
+                onClick={onFinish}
+                style={{
+                  width: '100%', background: 'none',
+                  border: '1.5px solid rgba(237,213,200,0.8)',
+                  borderRadius: '1rem', padding: '0.75rem',
+                  fontSize: '0.875rem', color: '#8B6B61', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Lanjut ke Dashboard
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -1363,7 +1534,7 @@ function FreemiumGate({ onDemo }: { onDemo: () => void }) {
         <h2
           style={{
             fontFamily: 'var(--font-playfair)',
-            fontSize: '1.5rem',
+            fontSize: 'clamp(1.25rem,4vw,1.5rem)',
             fontWeight: 700,
             color: '#2A1810',
             marginBottom: '0.375rem',

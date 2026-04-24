@@ -114,9 +114,14 @@ function Step1PartnerA({ onNext }: { onNext: () => void }) {
         </motion.button>
       </form>
 
-      <p style={{ marginTop: '2rem', fontSize: '0.8125rem', color: '#C4A090' }}>
-        Gratis · Privat · Dibuat dengan ❤️
-      </p>
+      <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.375rem', alignItems: 'center' }}>
+        <p style={{ fontSize: '0.8125rem', color: '#C4A090' }}>
+          Gratis · Privat · Dibuat dengan ❤️
+        </p>
+        <p style={{ fontSize: '0.75rem', color: '#C4A090', fontWeight: 500 }}>
+          ⏱ Setup &lt;3 menit — terhubung dengan pasanganmu sekarang
+        </p>
+      </div>
     </div>
   )
 }
@@ -177,7 +182,7 @@ function Step2Invite({ onNext }: { onNext: () => void }) {
         <div style={{ fontSize: '0.75rem', color: '#C4A090', marginBottom: '0.25rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           Unique Token
         </div>
-        <div style={{ fontSize: '1.625rem', fontWeight: 800, letterSpacing: '0.1em', color: '#E8846A', fontFamily: 'monospace' }}>
+        <div style={{ fontSize: 'clamp(1.1rem,4vw,1.625rem)', fontWeight: 800, letterSpacing: '0.1em', color: '#E8846A', fontFamily: 'monospace' }}>
           {inviteToken}
         </div>
       </div>
@@ -485,7 +490,7 @@ function Step4Connected({ onFinish }: { onFinish: () => void }) {
         transition={{ delay: 1 }}
         style={{ width: '100%', justifyContent: 'center', padding: '1rem', fontSize: '1rem' }}
       >
-        Mulai Daily Ritual →
+        Satu langkah lagi →
       </motion.button>
     </div>
   )

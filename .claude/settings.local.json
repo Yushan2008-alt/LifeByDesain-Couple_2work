@@ -15,7 +15,13 @@
       "Bash(taskkill /PID 14100 /F)",
       "PowerShell(Stop-Process -Id 14100 -Force)",
       "Bash(node -e \"require\\('/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/node_modules/zustand/react/shallow'\\); console.log\\('OK'\\)\")",
-      "Bash(node -e \"const z = require\\('/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/node_modules/zustand/shallow.js'\\); console.log\\(Object.keys\\(z\\)\\)\")"
+      "Bash(node -e \"const z = require\\('/c/Users/CANDRA DEWI/Desktop/.vscode/Work Apps Project/Second/lifebydesign-couple/node_modules/zustand/shallow.js'\\); console.log\\(Object.keys\\(z\\)\\)\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\CANDRA DEWI\\\\Desktop\\\\.vscode\\\\Work Apps Project\\\\Second\\\\app\\\\pricing\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\CANDRA DEWI\\\\Desktop\\\\.vscode\\\\Work Apps Project\\\\Second\\\\app\\\\privacy\")",
+      "Bash(gh api *)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/Yushan2008-alt/LifeByDesain-Couple_2work/main/product-brief-lifebydesign-couple.md\")"
     ]
   }
 }

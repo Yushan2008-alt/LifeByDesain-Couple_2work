@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMockStore, type MoodEmoji, type MoodTag, type TodoCategory } from '@/store/mockStore'
+import { useMockStore, type MoodEmoji, type MoodTag, type TodoCategory, generateSelfSuggestion, type Habit } from '@/store/mockStore'
 import { useShallow } from 'zustand/shallow'
 import { today, CATEGORY_CONFIG, INTENSITY_LABELS, habitCompletionThisWeek } from '@/lib/utils'
+import { analytics } from '@/lib/analytics'
 import {
   Flame, Plus, Trash2, CheckCircle2, Circle, CalendarCheck, Heart,
   MessageCircle, ChevronRight, Sparkles, Tag, BookOpen, Lock,
+  Crown, ArrowRight, Bell, TrendingUp, AlertTriangle, X, Pencil,
 } from 'lucide-react'
 
 // ── Spring variant ────────────────────────────────────────────────────────────
@@ -48,7 +51,7 @@ function StreakBadge() {
           Shared Streak
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
-          <span style={{ fontFamily: 'var(--font-playfair)', fontSize: '2.5rem', fontWeight: 700, lineHeight: 1 }}>{streak}</span>
+          <span style={{ fontFamily: 'var(--font-playfair)', fontSize: 'clamp(2rem,6vw,2.5rem)', fontWeight: 700, lineHeight: 1 }}>{streak}</span>
           <span style={{ fontSize: '0.875rem', opacity: 0.85 }}>hari berturut-turut</span>
         </div>
       </div>
@@ -285,79 +288,216 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. HABIT CHECKLIST
 // ─────────────────────────────────────────────────────────────────────────────
+// Predefined emoji options for habit picker
+const HABIT_EMOJIS = ['🏃','🧘','📚','💪','🛌','🥗','💧','🎨','🎵','✍️','🌿','🧹','💊','🚶','🐾','🧠']
+
 function HabitChecklist({ activePartner }: { activePartner: 'A' | 'B' }) {
-  const habits = useMockStore((s) => s.habits)
-  const toggleHabit = useMockStore((s) => s.toggleHabit)
+  const { habits, toggleHabit, addHabit, removeHabit } = useMockStore(
+    useShallow((s) => ({
+      habits:       s.habits,
+      toggleHabit:  s.toggleHabit,
+      addHabit:     s.addHabit,
+      removeHabit:  s.removeHabit,
+    }))
+  )
   const myHabits = habits.filter((h) => h.partner === activePartner)
   const todayStr = today()
 
+  const [editMode, setEditMode]       = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newLabel, setNewLabel]       = useState('')
+  const [newIcon, setNewIcon]         = useState('🏃')
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newLabel.trim()) return
+    addHabit(newLabel.trim(), newIcon, activePartner)
+    setNewLabel('')
+    setNewIcon('🏃')
+    setShowAddForm(false)
+  }
+
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <h3 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.0625rem', fontWeight: 600, color: '#2A1810' }}>
-        Habit Harian
-      </h3>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3 style={{ fontFamily: 'var(--font-playfair)', fontSize: 'clamp(0.9375rem,2.5vw,1.0625rem)', fontWeight: 600, color: '#2A1810' }}>
+          Habit Harian
+        </h3>
+        <button
+          onClick={() => { setEditMode((v) => !v); setShowAddForm(false) }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.3rem',
+            background: editMode ? 'rgba(232,132,106,0.12)' : 'transparent',
+            border: editMode ? '1px solid rgba(232,132,106,0.3)' : '1px solid #EDD5C8',
+            borderRadius: '0.625rem', padding: '0.3rem 0.625rem',
+            fontSize: '0.75rem', color: editMode ? '#E8846A' : '#8B6B61',
+            cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s',
+          }}
+        >
+          <Pencil size={11} />
+          {editMode ? 'Selesai' : 'Edit'}
+        </button>
+      </div>
+
+      {/* Habit list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {myHabits.map((habit) => {
-          const done = habit.completedDays.includes(todayStr)
-          const pct  = habitCompletionThisWeek(habit.completedDays)
-          return (
-            <motion.button
-              key={habit.id}
-              whileHover={{ x: 3 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => toggleHabit(habit.id, todayStr)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                background: done ? 'rgba(123,174,127,0.08)' : '#FFF8F5',
-                border: done ? '1.5px solid rgba(123,174,127,0.25)' : '1.5px solid #EDD5C8',
-                borderRadius: '0.875rem',
-                padding: '0.75rem 1rem',
-                cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease',
-              }}
-            >
-              {/* Icon */}
-              <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{habit.icon}</span>
-
-              {/* Label + progress */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.875rem', fontWeight: done ? 600 : 500, color: done ? '#3D7A43' : '#2A1810' }}>
-                  {habit.label}
-                </div>
-                {/* Mini progress bar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.25rem' }}>
-                  <div style={{ flex: 1, height: 4, background: '#EDD5C8', borderRadius: 2, overflow: 'hidden' }}>
-                    <motion.div
-                      animate={{ width: `${pct}%` }}
-                      transition={SPRING}
-                      style={{ height: '100%', background: done ? '#7BAE7F' : '#E8846A', borderRadius: 2 }}
-                    />
+        <AnimatePresence>
+          {myHabits.map((habit) => {
+            const done = habit.completedDays.includes(todayStr)
+            const pct  = habitCompletionThisWeek(habit.completedDays)
+            return (
+              <motion.div
+                key={habit.id}
+                layout
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 12, height: 0, marginBottom: 0 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <motion.button
+                  whileHover={{ x: editMode ? 0 : 3 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => !editMode && toggleHabit(habit.id, todayStr)}
+                  style={{
+                    flex: 1,
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    background: done ? 'rgba(123,174,127,0.08)' : '#FFF8F5',
+                    border: done ? '1.5px solid rgba(123,174,127,0.25)' : '1.5px solid #EDD5C8',
+                    borderRadius: '0.875rem',
+                    padding: '0.75rem 1rem',
+                    cursor: editMode ? 'default' : 'pointer',
+                    textAlign: 'left', transition: 'all 0.2s ease',
+                    opacity: editMode ? 0.7 : 1,
+                  }}
+                >
+                  <span style={{ fontSize: '1.125rem', lineHeight: 1 }}>{habit.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: done ? 600 : 500, color: done ? '#3D7A43' : '#2A1810' }}>
+                      {habit.label}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.25rem' }}>
+                      <div style={{ flex: 1, height: 4, background: '#EDD5C8', borderRadius: 2, overflow: 'hidden' }}>
+                        <motion.div
+                          animate={{ width: `${pct}%` }}
+                          transition={SPRING}
+                          style={{ height: '100%', background: done ? '#7BAE7F' : '#E8846A', borderRadius: 2 }}
+                        />
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#C4A090', whiteSpace: 'nowrap' }}>{pct}%</span>
+                    </div>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: '#C4A090', whiteSpace: 'nowrap' }}>{pct}% minggu ini</span>
-                </div>
-              </div>
+                  {!editMode && (
+                    <motion.div animate={{ scale: done ? 1 : 0.8, opacity: done ? 1 : 0.4 }}>
+                      {done ? <CheckCircle2 size={18} color="#7BAE7F" /> : <Circle size={18} color="#C4A090" />}
+                    </motion.div>
+                  )}
+                </motion.button>
 
-              {/* Check icon */}
-              <motion.div animate={{ scale: done ? 1 : 0.8, opacity: done ? 1 : 0.4 }}>
-                {done ? <CheckCircle2 size={18} color="#7BAE7F" /> : <Circle size={18} color="#C4A090" />}
+                {/* Delete button — only in edit mode */}
+                {editMode && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.7 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => removeHabit(habit.id)}
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                      background: 'rgba(232,100,100,0.1)', border: '1px solid rgba(232,100,100,0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <X size={13} color="#D45050" />
+                  </motion.button>
+                )}
               </motion.div>
-            </motion.button>
-          )
-        })}
+            )
+          })}
+        </AnimatePresence>
+
+        {myHabits.length === 0 && (
+          <p style={{ textAlign: 'center', color: '#C4A090', fontSize: '0.8125rem', padding: '0.75rem' }}>
+            Belum ada habit. Tambahkan di bawah! 👇
+          </p>
+        )}
       </div>
 
-      {/* Summary */}
-      <div
-        style={{
-          background: '#F0F7F0', borderRadius: '0.75rem', padding: '0.75rem 1rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontSize: '0.8125rem', color: '#5A9660',
-        }}
-      >
-        <span>
-          ✓ {myHabits.filter((h) => h.completedDays.includes(todayStr)).length}/{myHabits.length} selesai hari ini
-        </span>
-        <Sparkles size={13} />
-      </div>
+      {/* Add habit form */}
+      <AnimatePresence>
+        {editMode && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{ overflow: 'hidden' }}
+          >
+            {!showAddForm ? (
+              <button
+                onClick={() => setShowAddForm(true)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+                  background: 'rgba(232,132,106,0.07)', border: '1.5px dashed rgba(232,132,106,0.35)',
+                  borderRadius: '0.875rem', padding: '0.625rem',
+                  color: '#E8846A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <Plus size={14} /> Tambah Habit Baru
+              </button>
+            ) : (
+              <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {/* Emoji picker */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                  {HABIT_EMOJIS.map((e) => (
+                    <button
+                      key={e} type="button" onClick={() => setNewIcon(e)}
+                      style={{
+                        width: 34, height: 34, borderRadius: '0.5rem', fontSize: '1rem',
+                        border: newIcon === e ? '2px solid #E8846A' : '1.5px solid #EDD5C8',
+                        background: newIcon === e ? 'rgba(232,132,106,0.12)' : 'white',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    className="input-warm"
+                    placeholder="Nama habit (cth: Olahraga 30 menit)"
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    style={{ flex: 1 }}
+                    autoFocus
+                  />
+                  <button type="submit" disabled={!newLabel.trim()} className="btn-primary" style={{ padding: '0.625rem 1rem', fontSize: '0.8125rem' }}>
+                    Simpan
+                  </button>
+                  <button type="button" onClick={() => { setShowAddForm(false); setNewLabel('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4A090' }}>
+                    <X size={18} />
+                  </button>
+                </div>
+              </form>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Summary (only when not in edit mode) */}
+      {!editMode && myHabits.length > 0 && (
+        <div
+          style={{
+            background: '#F0F7F0', borderRadius: '0.75rem', padding: '0.75rem 1rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            fontSize: '0.8125rem', color: '#5A9660',
+          }}
+        >
+          <span>
+            ✓ {myHabits.filter((h) => h.completedDays.includes(todayStr)).length}/{myHabits.length} selesai hari ini
+          </span>
+          <Sparkles size={13} />
+        </div>
+      )}
     </div>
   )
 }
@@ -853,12 +993,277 @@ function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 8. STREAK AT RISK BANNER
+// ─────────────────────────────────────────────────────────────────────────────
+function StreakAtRiskBanner() {
+  const streak      = useMockStore((s) => s.streak)
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const [dismissed, setDismissed] = useState(false)
+
+  const todayStr     = today()
+  const todayEntries = moodHistory.filter((m) => m.date === todayStr)
+  const hasLoggedToday = todayEntries.length > 0
+
+  // Only show if: streak > 0 AND no entry today
+  if (hasLoggedToday || streak === 0 || dismissed) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={SPRING}
+      style={{
+        background: 'linear-gradient(135deg,rgba(248,200,80,0.12),rgba(232,132,106,0.10))',
+        border: '1.5px solid rgba(248,200,80,0.4)',
+        borderRadius: '1rem',
+        padding: '0.875rem 1rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+      }}
+    >
+      <AlertTriangle size={18} color="#C4860A" style={{ flexShrink: 0 }} />
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#7A5200' }}>
+          Streak {streak} hari hampir putus!
+        </div>
+        <div style={{ fontSize: '0.75rem', color: '#9A7000', lineHeight: 1.4 }}>
+          Log mood hari ini untuk menjaga streak kalian berdua 🔥
+        </div>
+      </div>
+      <button
+        onClick={() => { setDismissed(true); analytics.streakAtRiskSeen(streak) }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4860A', fontSize: '1.125rem', lineHeight: 1, padding: '0.25rem' }}
+      >
+        ×
+      </button>
+    </motion.div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9. WEEKLY INSIGHT CARD (AI self-suggestion on dashboard)
+// ─────────────────────────────────────────────────────────────────────────────
+function WeeklyInsightCard({ activePartner }: { activePartner: 'A' | 'B' }) {
+  const moodHistory = useMockStore((s) => s.moodHistory)
+  const suggestion  = generateSelfSuggestion(moodHistory, activePartner)
+  if (!suggestion) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...SPRING, delay: 0.1 }}
+      style={{
+        background: 'linear-gradient(135deg,rgba(107,159,212,0.08),rgba(123,174,127,0.06))',
+        border: '1px solid rgba(107,159,212,0.2)',
+        borderRadius: '1.25rem',
+        padding: '1rem 1.125rem',
+        display: 'flex',
+        gap: '0.75rem',
+        alignItems: 'flex-start',
+      }}
+    >
+      <div
+        style={{
+          width: 32, height: 32, borderRadius: '0.625rem',
+          background: 'rgba(107,159,212,0.15)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}
+      >
+        <TrendingUp size={15} color="#6B9FD4" />
+      </div>
+      <div>
+        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6B9FD4', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+          AI Insight Minggu Ini
+        </div>
+        <p style={{ fontSize: '0.8375rem', color: '#4A6080', lineHeight: 1.65 }}>
+          {suggestion}
+        </p>
+      </div>
+    </motion.div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10. PREMIUM CTA BAR (sticky bottom, only for non-premium)
+// ─────────────────────────────────────────────────────────────────────────────
+function PremiumCtaBar({ weeklyRitualsCompleted }: { weeklyRitualsCompleted: number }) {
+  const router     = useRouter()
+  const isPremium  = useMockStore((s) => s.isPremium)
+  const setPremium = useMockStore((s) => s.setPremium)
+  const [dismissed, setDismissed] = useState(false)
+
+  if (isPremium || dismissed) return null
+
+  const toNextMilestone = Math.max(0, 3 - weeklyRitualsCompleted)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...SPRING, delay: 0.6 }}
+      style={{
+        position: 'fixed',
+        bottom: 0, left: 0, right: 0,
+        zIndex: 40,
+        background: 'rgba(255,251,245,0.97)',
+        backdropFilter: 'blur(16px)',
+        borderTop: '1.5px solid rgba(232,132,106,0.25)',
+        padding: '0.875rem 1.25rem calc(0.875rem + env(safe-area-inset-bottom))',
+        boxShadow: '0 -8px 32px rgba(200,130,100,0.12)',
+      }}
+    >
+      <div style={{ maxWidth: 520, margin: '0 auto' }}>
+        {/* Progress to milestone */}
+        {toNextMilestone > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
+            <div style={{ flex: 1, height: 4, background: 'rgba(237,213,200,0.5)', borderRadius: 999, overflow: 'hidden' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(weeklyRitualsCompleted / 3) * 100}%` }}
+                transition={{ duration: 1, ease: 'easeOut', delay: 0.8 }}
+                style={{ height: '100%', background: 'linear-gradient(90deg,#E8846A,#F4A0A0)', borderRadius: 999 }}
+              />
+            </div>
+            <span style={{ fontSize: '0.7rem', color: '#C4A090', whiteSpace: 'nowrap', fontWeight: 600 }}>
+              {weeklyRitualsCompleted}/3 ritual → unlock deep trend
+            </span>
+          </div>
+        )}
+        {toNextMilestone === 0 && (
+          <div style={{ fontSize: '0.75rem', color: '#E8846A', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <Sparkles size={12} />
+            Kamu sudah selesai 3 ritual! Deep trend siap di-unlock →
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2A1810' }}>Mulai Free Trial 7 Hari</div>
+            <div style={{ fontSize: '0.7rem', color: '#8B6B61' }}>Weekly ritual, AI insights, recap lengkap</div>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => {
+              analytics.upgradeCtaClicked('dashboard_bottom_bar')
+              router.push('/pricing')
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.375rem',
+              background: 'linear-gradient(135deg,#E8846A,#F4A0A0)',
+              color: 'white', border: 'none',
+              borderRadius: '0.875rem', padding: '0.625rem 1.125rem',
+              fontSize: '0.8375rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <Crown size={14} />
+            Upgrade
+          </motion.button>
+          <button
+            onClick={() => setDismissed(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4A090', padding: '0.25rem', fontSize: '1.125rem', lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 11. REMINDER OPT-IN
+// ─────────────────────────────────────────────────────────────────────────────
+function ReminderOptInCard() {
+  const { reminderOptIn, setReminderOptIn } = useMockStore(useShallow((s) => ({
+    reminderOptIn:    s.reminderOptIn,
+    setReminderOptIn: s.setReminderOptIn,
+  })))
+  const [dismissed, setDismissed] = useState(false)
+
+  // Hide if both opted in or dismissed
+  if ((reminderOptIn.email && reminderOptIn.push) || dismissed) return null
+
+  function handleOptIn(channel: 'email' | 'push') {
+    setReminderOptIn(channel, true)
+    analytics.reminderOptIn(channel)
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...SPRING, delay: 0.4 }}
+      style={{
+        background: 'white',
+        border: '1px solid rgba(237,213,200,0.6)',
+        borderRadius: '1.25rem',
+        padding: '1rem 1.125rem',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+        <div style={{ width: 32, height: 32, borderRadius: '0.625rem', background: 'rgba(232,132,106,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Bell size={14} color="#E8846A" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.8375rem', fontWeight: 700, color: '#2A1810', marginBottom: '0.125rem' }}>
+            Aktifkan reminder ritual
+          </div>
+          <p style={{ fontSize: '0.775rem', color: '#8B6B61', lineHeight: 1.5, marginBottom: '0.75rem' }}>
+            Kami kirimin pengingat lembut saat jadwal ritual tiba. Tidak ada spam — cuma 1-2 notif per minggu.
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {!reminderOptIn.email && (
+              <button
+                onClick={() => handleOptIn('email')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.375rem',
+                  background: 'rgba(232,132,106,0.1)', border: '1.5px solid rgba(232,132,106,0.3)',
+                  borderRadius: '0.625rem', padding: '0.375rem 0.75rem',
+                  fontSize: '0.775rem', fontWeight: 600, color: '#E8846A', cursor: 'pointer',
+                }}
+              >
+                📧 Email
+              </button>
+            )}
+            {!reminderOptIn.push && (
+              <button
+                onClick={() => handleOptIn('push')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.375rem',
+                  background: 'rgba(107,159,212,0.1)', border: '1.5px solid rgba(107,159,212,0.3)',
+                  borderRadius: '0.625rem', padding: '0.375rem 0.75rem',
+                  fontSize: '0.775rem', fontWeight: 600, color: '#6B9FD4', cursor: 'pointer',
+                }}
+              >
+                🔔 Push
+              </button>
+            )}
+            <button
+              onClick={() => setDismissed(true)}
+              style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: '#C4A090', cursor: 'pointer', padding: '0.375rem 0.25rem' }}
+            >
+              Nanti dulu
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter()
-  const partnerA = useMockStore((s) => s.partnerA)
-  const partnerB = useMockStore((s) => s.partnerB)
+  const partnerA               = useMockStore((s) => s.partnerA)
+  const partnerB               = useMockStore((s) => s.partnerB)
+  const isPremium              = useMockStore((s) => s.isPremium)
+  const weeklyRitualsCompleted = useMockStore((s) => s.weeklyRitualsCompleted)
   const [activePartner, setActivePartner] = useState<'A' | 'B'>('A')
 
   // Redirect if not paired
@@ -876,8 +1281,11 @@ export default function DashboardPage() {
   return (
     <div
       className="bg-spring-subtle"
-      style={{ minHeight: '100dvh', padding: '1.5rem 1rem 3rem' }}
+      style={{ minHeight: '100dvh', padding: '1.5rem 1rem calc(3rem + 80px)' }}
     >
+      {/* Sticky premium CTA bottom bar */}
+      <PremiumCtaBar weeklyRitualsCompleted={weeklyRitualsCompleted} />
+
       <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
         {/* — Header ──────────────────────────────────────────── */}
@@ -945,6 +1353,12 @@ export default function DashboardPage() {
         {/* — Streak ────────────────────────────────────────────── */}
         <StreakBadge />
 
+        {/* — Streak at risk ───────────────────────────────────── */}
+        <StreakAtRiskBanner />
+
+        {/* — AI weekly insight ─────────────────────────────────── */}
+        <WeeklyInsightCard activePartner={activePartner} />
+
         {/* — Partner status ──────────────────────────────────── */}
         <PartnerStatus activePartner={activePartner} />
 
@@ -972,6 +1386,9 @@ export default function DashboardPage() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ ...SPRING, delay: 0.3 }}>
           <PrivateJournalWidget activePartner={activePartner} />
         </motion.div>
+
+        {/* — Reminder opt-in ───────────────────────────────────── */}
+        <ReminderOptInCard />
 
         {/* — CTA to Weekly Ritual ──────────────────────────────── */}
         <motion.button
