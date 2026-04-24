@@ -13,7 +13,7 @@ import { useShallow } from 'zustand/shallow'
 import { DIMENSION_LABELS, DIMENSIONS, habitCompletionThisWeek } from '@/lib/utils'
 import {
   Trophy, Star, Flame, TrendingUp, Heart, Share2,
-  BarChart2, Target, Sparkles, Lock, ArrowRight,
+  BarChart2, Target, Sparkles, Lock, ArrowRight, Download, ExternalLink,
 } from 'lucide-react'
 
 // ── Shared spring ─────────────────────────────────────────────────────────────
@@ -96,12 +96,15 @@ export default function RecapPage() {
   const wPrevA = scores.find((s) => s.week === 'W-prev' && s.partner === 'A')
   const wPrevB = scores.find((s) => s.week === 'W-prev' && s.partner === 'B')
 
-  const radarData = DIMENSIONS.map((dim) => {
+  // Use W-current scores if available, else fall back to W-prev + small deterministic improvement
+  const wCurA = scores.find((s) => s.week === 'W-current' && s.partner === 'A')
+  const wCurB = scores.find((s) => s.week === 'W-current' && s.partner === 'B')
+  const radarData = DIMENSIONS.map((dim, idx) => {
     const selfA = wPrevA?.self[dim] ?? 0
     const selfB = wPrevB?.self[dim] ?? 0
-    // Simulated "now" = slight improvement
-    const nowA  = Math.min(10, selfA + (Math.random() > 0.5 ? 0.5 : 0))
-    const nowB  = Math.min(10, selfB + (Math.random() > 0.5 ? 0.5 : 0))
+    // Use actual current week scores if available, else tiny deterministic bump
+    const nowA  = wCurA ? wCurA.self[dim] : Math.min(10, selfA + [0, 0.5, 0, 1, 0.5][idx % 5])
+    const nowB  = wCurB ? wCurB.self[dim] : Math.min(10, selfB + [0.5, 0, 1, 0, 0.5][idx % 5])
     return {
       dim: DIMENSION_LABELS[dim],
       'A (bulan lalu)': selfA,
@@ -541,27 +544,111 @@ export default function RecapPage() {
               </p>
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => alert('Share feature — coming soon! 🌸')}
+            <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  const text = `🌸 LifebyDesign Couple — April 2026\n🔥 ${streak} day streak\n💕 ${winsCount} wins\n⭐ Avg mood ${avgIntensity}/5\n\n${partnerA.name} & ${partnerB.name} — konsisten intentional! 💛`
+                  if (typeof navigator !== 'undefined' && navigator.share) {
+                    navigator.share({ title: 'LifebyDesign Monthly Recap', text }).catch(() => {})
+                  } else {
+                    navigator.clipboard.writeText(text).catch(() => {})
+                  }
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: '#E8846A',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.875rem',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <Share2 size={15} />
+                Bagikan Recap
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  const data = {
+                    exportedAt: new Date().toISOString(),
+                    period: 'April 2026',
+                    partners: { A: partnerA.name, B: partnerB.name },
+                    streak, totalMoodEntries, avgIntensity, winsCount,
+                    achievements, wins,
+                    scores: scores.map((s) => ({ week: s.week, partner: s.partner, self: s.self })),
+                  }
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = 'lbd-monthly-recap.json'; a.click()
+                  URL.revokeObjectURL(url)
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'white',
+                  color: '#8B6B61',
+                  border: '1.5px solid #EDD5C8',
+                  borderRadius: '0.875rem',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <Download size={15} />
+                Export JSON
+              </motion.button>
+            </div>
+          </div>
+        </FadeUp>
+
+        {/* Link to Yearly Recap */}
+        <FadeUp delay={0.38}>
+          <div
+            style={{
+              background: 'linear-gradient(135deg,rgba(107,159,212,0.08),rgba(123,174,127,0.06))',
+              borderRadius: '1.5rem',
+              padding: '1.25rem 1.5rem',
+              border: '1px solid rgba(107,159,212,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.75rem', color: '#6B9FD4', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                Yearly Wrapped
+              </div>
+              <p style={{ fontSize: '0.875rem', color: '#2A1810', fontWeight: 600, margin: 0 }}>
+                Lihat ringkasan perjalanan kalian setahun penuh
+              </p>
+              <p style={{ fontSize: '0.75rem', color: '#8B6B61', marginTop: '0.25rem' }}>
+                Visual storytelling dari growth kalian berdua 🌸
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/yearly-recap')}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: '#E8846A',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.875rem',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+                background: 'rgba(107,159,212,0.15)', color: '#5A90C4',
+                border: '1px solid rgba(107,159,212,0.3)',
+                borderRadius: '0.875rem', padding: '0.625rem 1rem',
+                fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0,
               }}
             >
-              <Share2 size={15} />
-              Bagikan Kartu Recap
-            </motion.button>
+              Lihat <ExternalLink size={13} />
+            </button>
           </div>
         </FadeUp>
 

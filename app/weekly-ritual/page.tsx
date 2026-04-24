@@ -16,7 +16,7 @@ import {
   ChevronLeft, TrendingUp, Star, Plus, Lightbulb, Target, Check, X,
   Users, User, Lock, Crown, BookOpen,
 } from 'lucide-react'
-import TemplateLibrary from '@/components/TemplateLibrary'
+import TemplateLibrary, { getWeeklyPrompts } from '@/components/TemplateLibrary'
 
 // ── Shared spring ─────────────────────────────────────────────────────────────
 const SPRING = { type: 'spring', stiffness: 280, damping: 26 } as const
@@ -352,6 +352,45 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
         )}
       </AnimatePresence>
 
+      {/* ── Rotating Weekly Prompts (PRD §10) ───────────── */}
+      {(() => {
+        const prompts = getWeeklyPrompts('medium', 3)
+        return (
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              <Star size={14} color="#E8846A" fill="#E8846A" /> Prompt Diskusi Minggu Ini
+              <span style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 400 }}>— bergilir tiap minggu</span>
+            </h4>
+            <p style={{ fontSize: '0.75rem', color: '#C4A090', marginBottom: '0.875rem', lineHeight: 1.5 }}>
+              Pilih 1-2 prompt ini sebagai pembuka diskusi kalian berdua. Tidak perlu semua dijawab.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {prompts.map((p, i) => (
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ ...SPRING, delay: i * 0.08 }}
+                  style={{
+                    background: 'rgba(232,132,106,0.05)',
+                    border: '1px solid rgba(232,132,106,0.18)',
+                    borderRadius: '0.875rem',
+                    padding: '0.75rem 1rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#E8846A', background: 'rgba(232,132,106,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem' }}>
+                      {p.category}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: '#5A3E37', lineHeight: 1.6, margin: 0 }}>{p.prompt}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* ── Template Library hint ────────────────────────── */}
       <button
         onClick={() => {
@@ -369,7 +408,7 @@ function Step1Overview({ onNext }: { onNext: () => void }) {
         }}
       >
         <BookOpen size={15} />
-        Template Library — 18 prompt siap pakai untuk conversation bermakna
+        Template Library — 32 prompt siap pakai untuk conversation bermakna
       </button>
 
       <motion.button
