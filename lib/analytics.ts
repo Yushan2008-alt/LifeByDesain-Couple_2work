@@ -56,7 +56,7 @@ export function useAnalytics() {
     dispatch(name, props)
   }
 
-  return { track, trackOnce }
+  return { track, trackOnce, analytics }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,24 +155,3 @@ export const analytics = {
 }
 
 export default analytics
-
-// ─────────────────────────────────────────────────────────────────────────────
-// React hook wrapper — lets components call analytics without importing the
-// object directly. `trackOnce` fires only once per session key.
-// ─────────────────────────────────────────────────────────────────────────────
-const _firedOnce = new Set<string>()
-
-export function useAnalytics() {
-  function track(name: string, props?: EventProps) {
-    dispatch(name, props)
-  }
-
-  /** Fires only once per session — keyed by event name */
-  function trackOnce(name: string, props?: EventProps) {
-    if (_firedOnce.has(name)) return
-    _firedOnce.add(name)
-    dispatch(name, props)
-  }
-
-  return { track, trackOnce, analytics }
-}
