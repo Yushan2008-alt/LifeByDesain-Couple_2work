@@ -569,7 +569,7 @@ export const useMockStore = create<MockStore>()(
                 week: 'W-baseline',
                 partner: 'A',
                 self: baseline.partnerA,
-                // Baseline capture only asks self-score, so we mirror to perceived as neutral placeholder.
+                // Baseline capture only asks self-score, so perceived is intentionally mirrored from self.
                 perceived: baseline.partnerA,
               },
               {
@@ -577,7 +577,7 @@ export const useMockStore = create<MockStore>()(
                 week: 'W-baseline',
                 partner: 'B',
                 self: baseline.partnerB,
-                // Baseline capture only asks self-score, so we mirror to perceived as neutral placeholder.
+                // Baseline capture only asks self-score, so perceived is intentionally mirrored from self.
                 perceived: baseline.partnerB,
               },
             ],
