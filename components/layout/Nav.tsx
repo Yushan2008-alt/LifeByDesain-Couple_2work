@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMockStore } from '@/store/mockStore'
-import { Home, CalendarCheck, Flame, CreditCard } from 'lucide-react'
+import { Home, CalendarCheck, Flame, BarChart2, Target, Clock } from 'lucide-react'
 import { isPartnerActiveToday, streakRiskStatus, today } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/dashboard',     label: 'Daily',  icon: Home },
-  { href: '/weekly-ritual', label: 'Weekly', icon: CalendarCheck },
-  { href: '/pricing', label: 'Pricing', icon: CreditCard },
+  { href: '/dashboard',     label: 'Daily',    icon: Home },
+  { href: '/weekly-ritual', label: 'Weekly',   icon: CalendarCheck },
+  { href: '/goals',         label: 'Goals',    icon: Target },
+  { href: '/recap',         label: 'Recap',    icon: BarChart2 },
+  { href: '/timeline',      label: 'Timeline', icon: Clock },
 ]
 
 // Nav items shown to non-paired visitors (landing page)
@@ -104,7 +106,7 @@ export default function Nav() {
       </div>
 
       {/* Nav links */}
-      <nav style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+      <nav style={{ display: 'flex', gap: '0.125rem', alignItems: 'center' }}>
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href)
           return (
@@ -114,19 +116,23 @@ export default function Nav() {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.375rem',
-                padding: '0.5rem 0.875rem',
-                borderRadius: '0.75rem',
-                fontSize: '0.875rem',
-                fontWeight: active ? 600 : 500,
+                gap: '0.3rem',
+                padding: '0.4rem 0.5rem',
+                borderRadius: '0.625rem',
+                fontSize: 'clamp(0.7rem,1.8vw,0.8125rem)',
+                fontWeight: active ? 700 : 500,
                 color: active ? '#E8846A' : '#8B6B61',
                 background: active ? 'rgba(232,132,106,0.10)' : 'transparent',
                 textDecoration: 'none',
                 transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
               }}
+              title={label}
             >
-              <Icon size={15} />
-              {label}
+              <Icon size={14} />
+              <span style={{ display: 'none' }}
+                className="nav-label"
+              >{label}</span>
             </Link>
           )
         })}

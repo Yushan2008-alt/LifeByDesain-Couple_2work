@@ -175,12 +175,16 @@ export default function LandingPage() {
             fontSize: 'clamp(2.25rem, 7vw, 4rem)',
             fontWeight: 700,
             color: '#2A1810',
-            lineHeight: 1.15,
-            maxWidth: 640,
+            lineHeight: 1.2,
+            maxWidth: 700,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.35em',
+            justifyContent: 'center',
+            alignItems: 'baseline',
           }}
         >
-          Investasi intentional
-          <br />
+          <span>Investasi intentional</span>
           <span style={{ color: '#E8846A' }}>untuk hubunganmu</span>
         </motion.h1>
 

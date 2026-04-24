@@ -93,6 +93,33 @@ export interface Journal {
   partner: 'A' | 'B'
 }
 
+// ── NEW: Long-term Goals (6-month / yearly) ──────────────────────────────────
+export type GoalCategory =
+  | 'travel' | 'communication' | 'intimacy'
+  | 'finances' | 'fun' | 'growth' | 'health' | 'family'
+
+export interface GoalCheckIn {
+  id: string
+  date: string   // YYYY-MM-DD
+  note: string
+  pct: number    // 0–100 progress
+}
+
+export interface Goal {
+  id: string
+  title: string
+  description: string
+  category: GoalCategory
+  period: '6-month' | 'yearly'
+  partner: 'A' | 'B' | 'both'
+  createdBy: 'A' | 'B'
+  startDate: string    // YYYY-MM-DD
+  targetDate: string   // YYYY-MM-DD
+  emoji: string
+  checkIns: GoalCheckIn[]
+  completed: boolean
+}
+
 // ── NEW: Weekly Commitment / Action Items ─────────────────────────────────────
 export interface Commitment {
   id: string
@@ -279,7 +306,84 @@ function buildDummyData() {
     },
   ]
 
-  return { moodHistory, habits, todos, emotionDumps, scores, wins, commitments, journals }
+  // ─── Long-term Goals (demo: campuran 6-month & yearly) ───────────────────
+  const periodStart = new Date(today); periodStart.setMonth(periodStart.getMonth() - 3)
+  const sixMonthEnd = new Date(today); sixMonthEnd.setMonth(sixMonthEnd.getMonth() + 3)
+  const yearEnd     = new Date(today); yearEnd.setFullYear(yearEnd.getFullYear() + 1)
+
+  const goals: Goal[] = [
+    {
+      id: 'g1', title: 'Liburan ke Jepang Berdua', emoji: '🗾',
+      description: 'Trip impian bareng — targetkan April tahun depan.',
+      category: 'travel', period: 'yearly',
+      partner: 'both', createdBy: 'A',
+      startDate: periodStart.toISOString().split('T')[0],
+      targetDate: yearEnd.toISOString().split('T')[0],
+      completed: false,
+      checkIns: [
+        { id: 'ci1', date: ago(60).date, note: 'Mulai nabung bersama 🐷', pct: 15 },
+        { id: 'ci2', date: ago(30).date, note: 'Sudah kumpulkan 40% dana!', pct: 40 },
+        { id: 'ci3', date: ago(7).date,  note: 'Research akomodasi Kyoto', pct: 55 },
+      ],
+    },
+    {
+      id: 'g2', title: 'Rutin Date Night Mingguan', emoji: '🕯️',
+      description: 'Minimal 1x per minggu, no HP, fokus berdua.',
+      category: 'intimacy', period: '6-month',
+      partner: 'both', createdBy: 'B',
+      startDate: periodStart.toISOString().split('T')[0],
+      targetDate: sixMonthEnd.toISOString().split('T')[0],
+      completed: false,
+      checkIns: [
+        { id: 'ci4', date: ago(45).date, note: 'Sudah 3 minggu konsisten!', pct: 30 },
+        { id: 'ci5', date: ago(14).date, note: 'Skip 2 minggu karena sibuk — restart', pct: 50 },
+        { id: 'ci6', date: ago(3).date,  note: 'Makan malam cantik tadi malam 🍷', pct: 65 },
+      ],
+    },
+    {
+      id: 'g3', title: 'Investasi Bersama (Dana Darurat)', emoji: '💰',
+      description: 'Kumpulkan 6x pengeluaran bulanan sebagai dana darurat keluarga.',
+      category: 'finances', period: 'yearly',
+      partner: 'both', createdBy: 'A',
+      startDate: periodStart.toISOString().split('T')[0],
+      targetDate: yearEnd.toISOString().split('T')[0],
+      completed: false,
+      checkIns: [
+        { id: 'ci7', date: ago(90).date, note: 'Buka rekening tabungan bersama', pct: 10 },
+        { id: 'ci8', date: ago(30).date, note: 'Sudah 2x pengeluaran bulanan', pct: 33 },
+      ],
+    },
+    {
+      id: 'g4', title: 'Lebih Terbuka Soal Perasaan', emoji: '💬',
+      description: 'Cerita tentang hari-hari dengan lebih jujur — tidak memendam sendiri.',
+      category: 'communication', period: '6-month',
+      partner: 'A', createdBy: 'A',
+      startDate: periodStart.toISOString().split('T')[0],
+      targetDate: sixMonthEnd.toISOString().split('T')[0],
+      completed: false,
+      checkIns: [
+        { id: 'ci9',  date: ago(50).date, note: 'Mulai journaling harian', pct: 20 },
+        { id: 'ci10', date: ago(20).date, note: 'Sudah 3 minggu rutin share di app', pct: 60 },
+        { id: 'ci11', date: ago(5).date,  note: 'Rasanya jauh lebih ringan!', pct: 80 },
+      ],
+    },
+    {
+      id: 'g5', title: 'Olahraga Bareng 3x / Minggu', emoji: '🏃',
+      description: 'Morning run atau gym bareng, jaga kesehatan berdua.',
+      category: 'health', period: '6-month',
+      partner: 'both', createdBy: 'B',
+      startDate: periodStart.toISOString().split('T')[0],
+      targetDate: sixMonthEnd.toISOString().split('T')[0],
+      completed: true,
+      checkIns: [
+        { id: 'ci12', date: ago(70).date, note: 'Mulai jogging pagi berdua', pct: 25 },
+        { id: 'ci13', date: ago(40).date, note: 'Konsisten 2x seminggu', pct: 60 },
+        { id: 'ci14', date: ago(10).date, note: 'Capai 3x seminggu selama 4 minggu!', pct: 100 },
+      ],
+    },
+  ]
+
+  return { moodHistory, habits, todos, emotionDumps, scores, wins, commitments, journals, goals }
 }
 
 // ============================================================
@@ -389,6 +493,9 @@ interface MockStore {
   // Private
   journals: Journal[]
 
+  // Long-term goals
+  goals: Goal[]
+
   // Weekly
   emotionDumps: EmotionDump[]
   scores: Score360[]
@@ -400,10 +507,19 @@ interface MockStore {
   isPremium: boolean
   // Relationship context (set during onboarding)
   relationshipContext: RelationshipContext | null
+  // Baseline 360 scores captured during onboarding (optional)
+  baseline360: {
+    partnerA: { communication: number; intimacy: number; support: number; fun: number; effort: number }
+    partnerB: { communication: number; intimacy: number; support: number; fun: number; effort: number }
+  } | null
   // Achievement/milestone IDs
   achievements: string[]
   // Weekly ritual completion counter (for "progress to premium value" nudge)
   weeklyRitualsCompleted: number
+  // Alias used by weekly-complete page
+  weeklyCompletions: number
+  // Trial state
+  trialStarted: boolean
   // Reminder opt-in channels
   reminderOptIn: { email: boolean; push: boolean }
 
@@ -431,10 +547,17 @@ interface MockStore {
   addCommitment: (text: string, partner: Commitment['partner'], createdBy: 'A' | 'B', week: string) => void
   toggleCommitment: (id: string) => void
 
+  addGoal: (goal: Omit<Goal, 'id' | 'checkIns' | 'completed'>) => void
+  addGoalCheckIn: (goalId: string, pct: number, note: string) => void
+  completeGoal: (goalId: string) => void
+  deleteGoal: (goalId: string) => void
+
   setActiveWeeklyStep: (step: number) => void
 
   setPremium: (val: boolean) => void
+  startTrial: () => void
   setRelationshipContext: (ctx: RelationshipContext) => void
+  setBaseline360: (data: MockStore['baseline360']) => void
   unlockAchievement: (id: string) => void
   incrementWeeklyRitualsCompleted: () => void
   setReminderOptIn: (channel: 'email' | 'push', val: boolean) => void
@@ -457,10 +580,13 @@ function createInitialState() {
     activeWeeklyStep: 0,
     isPremium: false,
     relationshipContext: null,
+    baseline360: null,
+    trialStarted: false,
     // Pre-unlock beberapa achievements untuk demo yang lebih engaging
     achievements: ['first_mood', 'streak_7', 'first_weekly_ritual'],
     // 2 rituals completed → user is 1 away from "unlock deep trend" (creates urgency)
     weeklyRitualsCompleted: 2,
+    weeklyCompletions: 2,
     reminderOptIn: { email: false, push: false },
     ...dummy,
   }
@@ -600,10 +726,38 @@ export const useMockStore = create<MockStore>()(
           commitments: s.commitments.map((c) => (c.id === id ? { ...c, done: !c.done } : c)),
         })),
 
+      addGoal: (goal) =>
+        set((s) => ({
+          goals: [...s.goals, { ...goal, id: 'g' + Date.now(), checkIns: [], completed: false }],
+        })),
+
+      addGoalCheckIn: (goalId, pct, note) =>
+        set((s) => ({
+          goals: s.goals.map((g) =>
+            g.id !== goalId ? g : {
+              ...g,
+              checkIns: [
+                ...g.checkIns,
+                { id: 'ci' + Date.now(), date: new Date().toISOString().split('T')[0], note, pct },
+              ],
+            }
+          ),
+        })),
+
+      completeGoal: (goalId) =>
+        set((s) => ({
+          goals: s.goals.map((g) => (g.id === goalId ? { ...g, completed: true, checkIns: [...g.checkIns, { id: 'ci' + Date.now(), date: new Date().toISOString().split('T')[0], note: '🎉 Goal selesai!', pct: 100 }] } : g)),
+        })),
+
+      deleteGoal: (goalId) =>
+        set((s) => ({ goals: s.goals.filter((g) => g.id !== goalId) })),
+
       setActiveWeeklyStep: (step) => set({ activeWeeklyStep: step }),
 
       setPremium: (val) => set({ isPremium: val }),
+      startTrial: () => set({ isPremium: true, trialStarted: true }),
       setRelationshipContext: (ctx) => set({ relationshipContext: ctx }),
+      setBaseline360: (data) => set({ baseline360: data }),
       unlockAchievement: (id) =>
         set((s) => ({
           achievements: s.achievements.includes(id)
@@ -611,7 +765,10 @@ export const useMockStore = create<MockStore>()(
             : [...s.achievements, id],
         })),
       incrementWeeklyRitualsCompleted: () =>
-        set((s) => ({ weeklyRitualsCompleted: s.weeklyRitualsCompleted + 1 })),
+        set((s) => ({
+          weeklyRitualsCompleted: s.weeklyRitualsCompleted + 1,
+          weeklyCompletions: s.weeklyCompletions + 1,
+        })),
       setReminderOptIn: (channel, val) =>
         set((s) => ({ reminderOptIn: { ...s.reminderOptIn, [channel]: val } })),
 
