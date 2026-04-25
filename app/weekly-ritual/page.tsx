@@ -1733,7 +1733,7 @@ export default function WeeklyRitualPage() {
   const PAGE_OUT = { opacity: 0, x: direction > 0 ? -40 : 40,  scale: 0.97 }
 
   return (
-    <div className="bg-spring" style={{ minHeight: '100dvh', padding: '1.5rem 1rem 3rem', position: 'relative' }}>
+    <div className="bg-spring" style={{ minHeight: '100dvh', padding: '1.5rem 1rem 6rem', position: 'relative' }}>
       {/* Freemium gate — renders on top if not premium */}
       {!isPremium && <FreemiumGate onDemo={() => setPremium(true)} />}
       <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

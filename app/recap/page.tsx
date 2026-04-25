@@ -134,7 +134,7 @@ export default function RecapPage() {
   const aiNarrative = `Bulan ini, ${partnerA.name} & ${partnerB.name} menunjukkan konsistensi yang luar biasa — ${streak} hari streak! Fokus kalian pada "${focus}" terlihat jelas dari ${totalMoodEntries} mood check-in dan rata-rata intensitas ${avgIntensity}/5. ${winsCount > 0 ? `Ada ${winsCount} weekly wins yang terkumpul — momen-momen kecil yang jadi fondasi hubungan kalian.` : ''} Tren mood ${partnerA.name} menunjukkan improvement di minggu ini dibanding 3 minggu lalu. Terus pertahankan ritualnya! 🌸`
 
   return (
-    <div className="bg-spring" style={{ minHeight: '100dvh', padding: '1.5rem 1rem 4rem' }}>
+    <div className="bg-spring" style={{ minHeight: '100dvh', padding: '1.5rem 1rem 6rem' }}>
       <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
         {/* Header */}

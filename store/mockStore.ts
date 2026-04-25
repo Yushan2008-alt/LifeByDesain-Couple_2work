@@ -1,6 +1,7 @@
 'use client'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { computeStreakDecrement } from '@/lib/utils'
 
 // ============================================================
 // TYPES
@@ -614,14 +615,21 @@ export const useMockStore = create<MockStore>()(
       // ── Daily ──────────────────────────────────────────
       addMoodEntry: (entry) =>
         set((s) => {
-          const newHistory = [...s.moodHistory, { ...entry, id: 'm' + Date.now() }]
+          const newHistory     = [...s.moodHistory, { ...entry, id: 'm' + Date.now() }]
           const newAchievements = [...s.achievements]
           // first_mood: first time ever logging mood
           if (!newAchievements.includes('first_mood')) newAchievements.push('first_mood')
+          // PRD §5.1 — auto-compute streak: break if partner missed 2 consecutive days
+          const liveStreak = computeStreakDecrement({
+            currentStreak: s.streak,
+            todayDate: entry.date,
+            moodHistory: newHistory,
+            habits: s.habits,
+          })
           // streak_7 and streak_30 auto-check
-          if (s.streak >= 7  && !newAchievements.includes('streak_7'))  newAchievements.push('streak_7')
-          if (s.streak >= 30 && !newAchievements.includes('streak_30')) newAchievements.push('streak_30')
-          return { moodHistory: newHistory, achievements: newAchievements }
+          if (liveStreak >= 7  && !newAchievements.includes('streak_7'))  newAchievements.push('streak_7')
+          if (liveStreak >= 30 && !newAchievements.includes('streak_30')) newAchievements.push('streak_30')
+          return { moodHistory: newHistory, streak: liveStreak, achievements: newAchievements }
         }),
 
       toggleHabit: (habitId, date) =>

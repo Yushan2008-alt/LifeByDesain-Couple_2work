@@ -291,16 +291,20 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
 // Predefined emoji options for habit picker
 const HABIT_EMOJIS = ['🏃','🧘','📚','💪','🛌','🥗','💧','🎨','🎵','✍️','🌿','🧹','💊','🚶','🐾','🧠']
 
+const MAX_FREE_HABITS = 5
+
 function HabitChecklist({ activePartner }: { activePartner: 'A' | 'B' }) {
-  const { habits, toggleHabit, addHabit, removeHabit } = useMockStore(
+  const { habits, toggleHabit, addHabit, removeHabit, isPremium } = useMockStore(
     useShallow((s) => ({
       habits:       s.habits,
       toggleHabit:  s.toggleHabit,
       addHabit:     s.addHabit,
       removeHabit:  s.removeHabit,
+      isPremium:    s.isPremium,
     }))
   )
-  const myHabits = habits.filter((h) => h.partner === activePartner)
+  const myHabits   = habits.filter((h) => h.partner === activePartner)
+  const atHabitCap = !isPremium && myHabits.length >= MAX_FREE_HABITS
   const todayStr = today()
 
   const [editMode, setEditMode]       = useState(false)
@@ -432,17 +436,30 @@ function HabitChecklist({ activePartner }: { activePartner: 'A' | 'B' }) {
             style={{ overflow: 'hidden' }}
           >
             {!showAddForm ? (
-              <button
-                onClick={() => setShowAddForm(true)}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
-                  background: 'rgba(232,132,106,0.07)', border: '1.5px dashed rgba(232,132,106,0.35)',
-                  borderRadius: '0.875rem', padding: '0.625rem',
-                  color: '#E8846A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                <Plus size={14} /> Tambah Habit Baru
-              </button>
+              atHabitCap ? (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+                  background: 'rgba(232,132,106,0.05)', border: '1.5px dashed rgba(237,213,200,0.6)',
+                  borderRadius: '0.875rem', padding: '0.75rem',
+                  color: '#C4A090', fontSize: '0.8125rem',
+                }}>
+                  <Crown size={13} color="#B8956A" />
+                  <span>Maks {MAX_FREE_HABITS} habit di Free — </span>
+                  <Link href="/pricing" style={{ color: '#E8846A', fontWeight: 600, textDecoration: 'none' }}>Upgrade Premium</Link>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAddForm(true)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+                    background: 'rgba(232,132,106,0.07)', border: '1.5px dashed rgba(232,132,106,0.35)',
+                    borderRadius: '0.875rem', padding: '0.625rem',
+                    color: '#E8846A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={14} /> Tambah Habit Baru
+                </button>
+              )
             ) : (
               <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 {/* Emoji picker */}

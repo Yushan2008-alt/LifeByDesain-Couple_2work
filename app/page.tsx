@@ -1,10 +1,12 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useMockStore } from '@/store/mockStore'
 import {
-  Heart, Shield, Sparkles, BarChart2, BookOpen, Calendar,
+  Heart, Sparkles,
   ArrowRight, Check, Flame, Star, Lock,
 } from 'lucide-react'
 
@@ -118,10 +120,23 @@ const PREMIUM_FEATURES = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
+  const router     = useRouter()
   const partnerA   = useMockStore((s) => s.partnerA)
   const partnerB   = useMockStore((s) => s.partnerB)
-  const streak     = useMockStore((s) => s.streak)
   const bothJoined = partnerA.joined && partnerB.joined
+
+  // Pengguna sudah login → langsung ke dashboard, jangan tampilkan fitur/pricing
+  useEffect(() => {
+    if (bothJoined) router.replace('/dashboard')
+  }, [bothJoined, router])
+
+  if (bothJoined) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh' }}>
+        <span style={{ fontSize: '2rem' }}>🌸</span>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -210,66 +225,33 @@ export default function LandingPage() {
           transition={{ ...SPRING, delay: 0.34 }}
           style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}
         >
-          {bothJoined ? (
-            <>
-              <Link
-                href="/dashboard"
-                className="btn-primary"
-                style={{ textDecoration: 'none', padding: '0.875rem 1.75rem', fontSize: '1rem' }}
-              >
-                <Flame size={18} />
-                Lanjutkan ({streak} day streak 🔥)
-              </Link>
-              <Link
-                href="/onboarding"
-                style={{
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.875rem 1.5rem',
-                  borderRadius: '1rem',
-                  border: '1.5px solid rgba(232,132,106,0.35)',
-                  color: '#E8846A',
-                  fontSize: '0.9375rem',
-                  fontWeight: 600,
-                  background: 'white',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                Reset & Mulai Ulang
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/onboarding"
-                className="btn-primary"
-                style={{ textDecoration: 'none', padding: '0.875rem 1.75rem', fontSize: '1rem' }}
-              >
-                Mulai Gratis Sekarang
-                <ArrowRight size={18} />
-              </Link>
-              <a
-                href="#fitur"
-                style={{
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.875rem 1.5rem',
-                  borderRadius: '1rem',
-                  border: '1.5px solid rgba(139,107,97,0.25)',
-                  color: '#8B6B61',
-                  fontSize: '0.9375rem',
-                  fontWeight: 600,
-                  background: 'white',
-                }}
-              >
-                Lihat Fitur
-              </a>
-            </>
-          )}
+          <Link
+            href="/onboarding"
+            className="btn-primary"
+            style={{ textDecoration: 'none', padding: '1rem 2rem', fontSize: '1rem', minHeight: 52 }}
+          >
+            Mulai Gratis Sekarang
+            <ArrowRight size={18} />
+          </Link>
+          <a
+            href="#fitur"
+            style={{
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '1rem 1.75rem',
+              borderRadius: '1rem',
+              border: '1.5px solid rgba(139,107,97,0.25)',
+              color: '#8B6B61',
+              fontSize: '0.9375rem',
+              fontWeight: 600,
+              background: 'white',
+              minHeight: 52,
+            }}
+          >
+            Lihat Fitur
+          </a>
         </motion.div>
 
         {/* Social proof mini */}

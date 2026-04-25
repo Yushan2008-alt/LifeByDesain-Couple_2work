@@ -95,13 +95,63 @@ export function isPartnerActiveToday(args: {
   return hasMood || hasHabit
 }
 
+/**
+ * PRD §5.1 — Streak risk:
+ * "at-risk"  → salah satu/kedua belum aktif hari ini
+ * "buffer"   → kemarin juga salah satu tidak aktif (streak break besok)
+ * "safe"     → keduanya aktif hari ini
+ */
 export function streakRiskStatus(args: {
   todayDate: string
   moodHistory: { date: string; partner: 'A' | 'B' }[]
   habits: { partner: 'A' | 'B'; completedDays: string[] }[]
-}) {
-  const activeA = isPartnerActiveToday({ partner: 'A', todayDate: args.todayDate, moodHistory: args.moodHistory, habits: args.habits })
-  const activeB = isPartnerActiveToday({ partner: 'B', todayDate: args.todayDate, moodHistory: args.moodHistory, habits: args.habits })
-  if (activeA && activeB) return 'safe' as const
-  return 'at-risk' as const
+}): 'safe' | 'at-risk' | 'buffer' {
+  const { todayDate, moodHistory, habits } = args
+
+  // Yesterday
+  const yd = new Date(todayDate + 'T00:00:00')
+  yd.setDate(yd.getDate() - 1)
+  const yesterdayDate = yd.toISOString().split('T')[0]
+
+  const activeA_today     = isPartnerActiveToday({ partner: 'A', todayDate, moodHistory, habits })
+  const activeB_today     = isPartnerActiveToday({ partner: 'B', todayDate, moodHistory, habits })
+  const activeA_yesterday = isPartnerActiveToday({ partner: 'A', todayDate: yesterdayDate, moodHistory, habits })
+  const activeB_yesterday = isPartnerActiveToday({ partner: 'B', todayDate: yesterdayDate, moodHistory, habits })
+
+  if (activeA_today && activeB_today) return 'safe'
+
+  // Both missed yesterday AND one/both not active today → buffer used, streak will break tomorrow
+  const missedYesterday = !activeA_yesterday || !activeB_yesterday
+  if (missedYesterday) return 'buffer'
+
+  return 'at-risk'
+}
+
+/**
+ * Checks if streak should be broken based on recent activity.
+ * Returns the new streak value.
+ * PRD: "Break kalau salah satu ga engage 2 hari berturut-turut (buffer 1 hari)"
+ */
+export function computeStreakDecrement(args: {
+  currentStreak: number
+  todayDate: string
+  moodHistory: { date: string; partner: 'A' | 'B' }[]
+  habits: { partner: 'A' | 'B'; completedDays: string[] }[]
+}): number {
+  const { currentStreak, todayDate, moodHistory, habits } = args
+  if (currentStreak === 0) return 0
+
+  const yd  = new Date(todayDate + 'T00:00:00'); yd.setDate(yd.getDate() - 1)
+  const yd2 = new Date(todayDate + 'T00:00:00'); yd2.setDate(yd2.getDate() - 2)
+  const yesterday  = yd.toISOString().split('T')[0]
+  const dayBefore  = yd2.toISOString().split('T')[0]
+
+  const miss1A = !isPartnerActiveToday({ partner: 'A', todayDate: yesterday, moodHistory, habits })
+  const miss1B = !isPartnerActiveToday({ partner: 'B', todayDate: yesterday, moodHistory, habits })
+  const miss2A = !isPartnerActiveToday({ partner: 'A', todayDate: dayBefore,  moodHistory, habits })
+  const miss2B = !isPartnerActiveToday({ partner: 'B', todayDate: dayBefore,  moodHistory, habits })
+
+  // Streak breaks if one partner missed both yesterday AND day before (2 consecutive days)
+  const streakBroken = (miss1A && miss2A) || (miss1B && miss2B)
+  return streakBroken ? 0 : currentStreak
 }

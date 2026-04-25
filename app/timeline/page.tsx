@@ -249,7 +249,7 @@ export default function TimelinePage() {
   const uniqueDays   = new Set(allEntries.map((e) => e.date)).size
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', padding: 'clamp(1rem,4vw,2rem) clamp(1rem,4vw,1.5rem) 4rem' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: 'clamp(1rem,4vw,2rem) clamp(1rem,4vw,1.5rem) 6rem' }}>
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
