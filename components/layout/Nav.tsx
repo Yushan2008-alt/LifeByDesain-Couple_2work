@@ -24,11 +24,13 @@ const LANDING_NAV_ITEMS = [
 export default function Nav() {
   const pathname = usePathname()
   // Separate selectors — never return new objects (causes infinite re-render loop)
-  const partnerA = useMockStore((s) => s.partnerA)
-  const partnerB = useMockStore((s) => s.partnerB)
-  const streak   = useMockStore((s) => s.streak)
-  const moodHistory = useMockStore((s) => s.moodHistory)
-  const habits = useMockStore((s) => s.habits)
+  const partnerA      = useMockStore((s) => s.partnerA)
+  const partnerB      = useMockStore((s) => s.partnerB)
+  const streak        = useMockStore((s) => s.streak)
+  const moodHistory   = useMockStore((s) => s.moodHistory)
+  const habits        = useMockStore((s) => s.habits)
+  const activePartner = useMockStore((s) => s.activePartner)
+  const setActivePartner = useMockStore((s) => s.setActivePartner)
 
   const bothJoined = partnerA.joined && partnerB.joined
 
@@ -137,6 +139,63 @@ export default function Nav() {
           )
         })}
       </nav>
+
+      {/* Switch Partner toggle */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+          background: 'rgba(237,213,200,0.35)',
+          border: '1px solid rgba(237,213,200,0.7)',
+          borderRadius: '999px',
+          padding: '0.2rem',
+        }}
+        title="Switch Partner — simulasi dua arah"
+      >
+        {(['A', 'B'] as const).map((p) => {
+          const name = p === 'A' ? partnerA.name : partnerB.name
+          const initial = name ? name.charAt(0).toUpperCase() : p
+          const isActive = activePartner === p
+          return (
+            <button
+              key={p}
+              onClick={() => setActivePartner(p)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '999px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: isActive ? 700 : 500,
+                background: isActive ? 'linear-gradient(135deg,#E8846A,#D4756A)' : 'transparent',
+                color: isActive ? '#fff' : '#8B6B61',
+                transition: 'all 0.18s ease',
+              }}
+            >
+              <span
+                style={{
+                  width: '1.1rem',
+                  height: '1.1rem',
+                  borderRadius: '50%',
+                  background: isActive ? 'rgba(255,255,255,0.3)' : 'rgba(139,107,97,0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                }}
+              >
+                {initial}
+              </span>
+              <span style={{ display: 'none' }} className="nav-label">{name || `Partner ${p}`}</span>
+            </button>
+          )
+        })}
+      </div>
 
       {/* Streak + partner activity */}
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>

@@ -930,62 +930,77 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
       {/* Gap Analysis — seberapa akurat kalian saling menebak */}
       <div className="card" style={{ padding: '1.25rem' }}>
         <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2A1810', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          <Sparkles size={13} color="#E8846A" /> Gap Analysis
+          <Sparkles size={13} color="#E8846A" /> Gap Analysis — Seberapa Dalam Kalian Saling Mengenal?
         </h4>
-        <p style={{ fontSize: '0.75rem', color: '#C4A090', marginBottom: '0.875rem', lineHeight: 1.5 }}>
-          Perbedaan antara skor diri sendiri vs tebakan pasangan = seberapa dalam kalian saling memahami.
+        <p style={{ fontSize: '0.75rem', color: '#C4A090', marginBottom: '1rem', lineHeight: 1.5 }}>
+          Bar menunjukkan <strong>besar gap</strong> antara skor diri sendiri vs tebakan pasangan. Hijau = akurat, Merah = perlu diskusi.
         </p>
 
-        {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <div />
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#E8846A', textAlign: 'center' }}>
-            {getName('A')} vs tebakan {getName('B')}
-          </div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7BAE7F', textAlign: 'center' }}>
-            {getName('B')} vs tebakan {getName('A')}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {gapRows.map(({ dim, gapA, gapB, absA, absB }) => {
+            // bar width = gap magnitude out of max 9 (1-10 scale), capped at 100%
+            const barPctA = Math.min(100, (absA / 9) * 100)
+            const barPctB = Math.min(100, (absB / 9) * 100)
+            const colorA  = absA === 0 ? '#7BAE7F' : absA <= 2 ? '#A8C8A8' : absA <= 4 ? '#E8A86A' : '#F4A0A0'
+            const colorB  = absB === 0 ? '#7BAE7F' : absB <= 2 ? '#A8C8A8' : absB <= 4 ? '#E8A86A' : '#F4A0A0'
+            const labelA  = absA === 0 ? '✓ Tepat' : gapA > 0 ? `+${gapA} (under)` : `${gapA} (over)`
+            const labelB  = absB === 0 ? '✓ Tepat' : gapB > 0 ? `+${gapB} (under)` : `${gapB} (over)`
+            return (
+              <div key={dim}>
+                <div style={{ fontSize: '0.8rem', color: '#2A1810', fontWeight: 600, marginBottom: '0.375rem' }}>
+                  {DIMENSION_LABELS[dim]}
+                </div>
+                {/* Row A */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <div style={{ width: 48, fontSize: '0.7rem', color: '#E8846A', fontWeight: 700, flexShrink: 0 }}>{getName('A')}</div>
+                  <div style={{ flex: 1, height: 8, background: '#EDD5C8', borderRadius: 4, overflow: 'hidden' }}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: barPctA === 0 ? '4%' : `${barPctA}%` }}
+                      transition={{ ...SPRING, delay: 0.1 }}
+                      style={{ height: '100%', background: colorA, borderRadius: 4 }}
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: colorA === '#7BAE7F' || colorA === '#A8C8A8' ? '#3D7A43' : colorA === '#E8A86A' ? '#B86A20' : '#C07070', width: 72, textAlign: 'right', flexShrink: 0 }}>
+                    {labelA}
+                  </span>
+                </div>
+                {/* Row B */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: 48, fontSize: '0.7rem', color: '#7BAE7F', fontWeight: 700, flexShrink: 0 }}>{getName('B')}</div>
+                  <div style={{ flex: 1, height: 8, background: '#EDD5C8', borderRadius: 4, overflow: 'hidden' }}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: barPctB === 0 ? '4%' : `${barPctB}%` }}
+                      transition={{ ...SPRING, delay: 0.15 }}
+                      style={{ height: '100%', background: colorB, borderRadius: 4 }}
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: colorB === '#7BAE7F' || colorB === '#A8C8A8' ? '#3D7A43' : colorB === '#E8A86A' ? '#B86A20' : '#C07070', width: 72, textAlign: 'right', flexShrink: 0 }}>
+                    {labelB}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {gapRows.map(({ dim, gapA, gapB, absA, absB }) => (
-            <div key={dim} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: '#5A3E37', fontWeight: 500 }}>{DIMENSION_LABELS[dim]}</span>
-
-              {/* Gap A */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <div style={{ flex: 1, height: 6, background: '#EDD5C8', borderRadius: 3, overflow: 'hidden' }}>
-                  <motion.div
-                    animate={{ width: `${(selfA[dim] / 10) * 100}%` }}
-                    transition={SPRING}
-                    style={{ height: '100%', background: absA > 2 ? '#F4A0A0' : '#7BAE7F', borderRadius: 3 }}
-                  />
-                </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, width: 28, textAlign: 'right', flexShrink: 0, color: absA > 2 ? '#C07070' : '#3D7A43' }}>
-                  {absA === 0 ? '✓' : gapA > 0 ? `+${gapA}` : `${gapA}`}
-                </span>
-              </div>
-
-              {/* Gap B */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <div style={{ flex: 1, height: 6, background: '#EDD5C8', borderRadius: 3, overflow: 'hidden' }}>
-                  <motion.div
-                    animate={{ width: `${(selfB[dim] / 10) * 100}%` }}
-                    transition={SPRING}
-                    style={{ height: '100%', background: absB > 2 ? '#F4A0A0' : '#7BAE7F', borderRadius: 3 }}
-                  />
-                </div>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, width: 28, textAlign: 'right', flexShrink: 0, color: absB > 2 ? '#C07070' : '#3D7A43' }}>
-                  {absB === 0 ? '✓' : gapB > 0 ? `+${gapB}` : `${gapB}`}
-                </span>
-              </div>
+        {/* Legend */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem', paddingTop: '0.875rem', borderTop: '1px solid #EDD5C8' }}>
+          {[
+            { color: '#7BAE7F',  label: 'Tepat' },
+            { color: '#A8C8A8',  label: 'Gap ±1–2 (cukup akurat)' },
+            { color: '#E8A86A',  label: 'Gap ±3–4 (worth dicek)' },
+            { color: '#F4A0A0',  label: 'Gap ±5+ (diskusi penting!)' },
+          ].map(({ color, label }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
+              <span style={{ fontSize: '0.68rem', color: '#8B6B61' }}>{label}</span>
             </div>
           ))}
         </div>
-
-        <p style={{ fontSize: '0.7rem', color: '#C4A090', marginTop: '0.875rem', lineHeight: 1.5 }}>
-          ✓ = tepat &nbsp;|&nbsp; ±1–2 = cukup akurat &nbsp;|&nbsp; ±3+ = worth diskusi 💬<br />
-          <span style={{ color: '#F4A0A0' }}>+</span> = underestimate, <span style={{ color: '#7BAE7F' }}>−</span> = overestimate perasaan pasangan
+        <p style={{ fontSize: '0.7rem', color: '#C4A090', marginTop: '0.5rem', lineHeight: 1.5 }}>
+          <em>under = pasangan underestimate perasaanmu · over = pasangan overestimate</em>
         </p>
       </div>
 

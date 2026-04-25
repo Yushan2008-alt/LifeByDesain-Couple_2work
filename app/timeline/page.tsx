@@ -153,9 +153,17 @@ export default function TimelinePage() {
     }))
   )
 
-  const [filterType, setFilterType]     = useState<EntryType | 'all'>('all')
+  const [filterType, setFilterType]       = useState<EntryType | 'all'>('all')
   const [filterPartner, setFilterPartner] = useState<'all' | 'A' | 'B'>('all')
-  const [showFilter, setShowFilter]     = useState(false)
+  const [filterRange, setFilterRange]     = useState<'all' | '7d' | '30d' | '90d'>('all')
+  const [showFilter, setShowFilter]       = useState(false)
+
+  const DATE_RANGES: { value: typeof filterRange; label: string }[] = [
+    { value: 'all',  label: 'Semua Waktu' },
+    { value: '7d',   label: '7 Hari' },
+    { value: '30d',  label: '30 Hari' },
+    { value: '90d',  label: '3 Bulan' },
+  ]
 
   // Build unified timeline
   const allEntries = useMemo<TimelineEntry[]>(() => {
@@ -219,14 +227,21 @@ export default function TimelinePage() {
 
   // Apply filters
   const filtered = useMemo(() => {
+    const now = Date.now()
+    const rangeDays: Record<typeof filterRange, number> = { all: Infinity, '7d': 7, '30d': 30, '90d': 90 }
+    const maxDays = rangeDays[filterRange]
     return allEntries.filter((e) => {
       if (filterType !== 'all' && e.type !== filterType) return false
       if (filterPartner !== 'all') {
         if (e.partner !== filterPartner && e.partner !== 'both') return false
       }
+      if (maxDays !== Infinity) {
+        const diff = (now - new Date(e.date + 'T00:00:00').getTime()) / 86_400_000
+        if (diff > maxDays) return false
+      }
       return true
     })
-  }, [allEntries, filterType, filterPartner])
+  }, [allEntries, filterType, filterPartner, filterRange])
 
   const grouped = groupByDate(filtered)
 
@@ -262,6 +277,16 @@ export default function TimelinePage() {
             }}
           >
             <Filter size={13} /> Filter
+            {(filterType !== 'all' || filterPartner !== 'all' || filterRange !== 'all') && (
+              <span style={{
+                background: '#E8846A', color: 'white',
+                borderRadius: '50%', width: 16, height: 16,
+                fontSize: '0.65rem', fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {[filterType !== 'all', filterPartner !== 'all', filterRange !== 'all'].filter(Boolean).length}
+              </span>
+            )}
           </button>
         </div>
       </motion.div>
@@ -294,6 +319,25 @@ export default function TimelinePage() {
                   ))}
                 </div>
               </div>
+              {/* Date range filter */}
+              <div>
+                <div style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>Rentang Waktu</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                  {DATE_RANGES.map(({ value, label }) => (
+                    <button key={value} onClick={() => setFilterRange(value)}
+                      style={{
+                        padding: '0.25rem 0.625rem', borderRadius: '2rem', fontSize: '0.75rem',
+                        fontWeight: filterRange === value ? 700 : 500,
+                        border: filterRange === value ? '2px solid #6B9FD4' : '1.5px solid #EDD5C8',
+                        background: filterRange === value ? 'rgba(107,159,212,0.1)' : 'white',
+                        color: filterRange === value ? '#6B9FD4' : '#8B6B61',
+                        cursor: 'pointer',
+                      }}
+                    >{label}</button>
+                  ))}
+                </div>
+              </div>
+
               {/* Partner filter */}
               <div>
                 <div style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>Partner</div>

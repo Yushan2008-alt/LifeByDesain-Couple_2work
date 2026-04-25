@@ -561,6 +561,10 @@ interface MockStore {
   incrementWeeklyRitualsCompleted: () => void
   setReminderOptIn: (channel: 'email' | 'push', val: boolean) => void
 
+  // ── Switch Partner (UI simulation — no database) ──────────
+  activePartner: 'A' | 'B'
+  setActivePartner: (partner: 'A' | 'B') => void
+
   reset: () => void
 }
 
@@ -587,6 +591,7 @@ function createInitialState() {
     weeklyRitualsCompleted: 2,
     weeklyCompletions: 2,
     reminderOptIn: { email: false, push: false },
+    activePartner: 'A' as 'A' | 'B',
     ...dummy,
   }
 }
@@ -608,7 +613,16 @@ export const useMockStore = create<MockStore>()(
 
       // ── Daily ──────────────────────────────────────────
       addMoodEntry: (entry) =>
-        set((s) => ({ moodHistory: [...s.moodHistory, { ...entry, id: 'm' + Date.now() }] })),
+        set((s) => {
+          const newHistory = [...s.moodHistory, { ...entry, id: 'm' + Date.now() }]
+          const newAchievements = [...s.achievements]
+          // first_mood: first time ever logging mood
+          if (!newAchievements.includes('first_mood')) newAchievements.push('first_mood')
+          // streak_7 and streak_30 auto-check
+          if (s.streak >= 7  && !newAchievements.includes('streak_7'))  newAchievements.push('streak_7')
+          if (s.streak >= 30 && !newAchievements.includes('streak_30')) newAchievements.push('streak_30')
+          return { moodHistory: newHistory, achievements: newAchievements }
+        }),
 
       toggleHabit: (habitId, date) =>
         set((s) => ({
@@ -671,15 +685,25 @@ export const useMockStore = create<MockStore>()(
         set((s) => ({ emotionDumps: s.emotionDumps.map((e) => (e.id === id ? { ...e, refinedText } : e)) })),
 
       shareEmotionDump: (id) =>
-        set((s) => ({ emotionDumps: s.emotionDumps.map((e) => (e.id === id ? { ...e, shared: true } : e)) })),
+        set((s) => {
+          const updatedDumps = s.emotionDumps.map((e) => (e.id === id ? { ...e, shared: true } : e))
+          const newAchievements = s.achievements.includes('first_emotion_shared')
+            ? s.achievements
+            : [...s.achievements, 'first_emotion_shared']
+          return { emotionDumps: updatedDumps, achievements: newAchievements }
+        }),
 
       upsertScore: (score) =>
-        set((s) => ({
-          scores: [
+        set((s) => {
+          const newScores = [
             ...s.scores.filter((sc) => !(sc.week === score.week && sc.partner === score.partner)),
             { ...score, id: 's' + Date.now() },
-          ],
-        })),
+          ]
+          const newAchievements = s.achievements.includes('first_360')
+            ? s.achievements
+            : [...s.achievements, 'first_360']
+          return { scores: newScores, achievements: newAchievements }
+        }),
 
       setBaseline360: (baseline) =>
         set((s) => {
@@ -716,7 +740,13 @@ export const useMockStore = create<MockStore>()(
         }),
 
       addWin: (text, type, partner) =>
-        set((s) => ({ wins: [...s.wins, { id: 'w' + Date.now(), text, type, partner, week: 'W-current' }] })),
+        set((s) => {
+          const newWins = [...s.wins, { id: 'w' + Date.now(), text, type, partner, week: 'W-current' }]
+          const newAchievements = s.achievements.includes('first_win')
+            ? s.achievements
+            : [...s.achievements, 'first_win']
+          return { wins: newWins, achievements: newAchievements }
+        }),
 
       addCommitment: (text, partner, createdBy, week) =>
         set((s) => ({
@@ -769,12 +799,21 @@ export const useMockStore = create<MockStore>()(
             : [...s.achievements, id],
         })),
       incrementWeeklyRitualsCompleted: () =>
-        set((s) => ({
-          weeklyRitualsCompleted: s.weeklyRitualsCompleted + 1,
-          weeklyCompletions: s.weeklyCompletions + 1,
-        })),
+        set((s) => {
+          const next = s.weeklyRitualsCompleted + 1
+          const newAchievements = [...s.achievements]
+          if (!newAchievements.includes('first_weekly_ritual')) newAchievements.push('first_weekly_ritual')
+          return {
+            weeklyRitualsCompleted: next,
+            weeklyCompletions: next,
+            achievements: newAchievements,
+          }
+        }),
       setReminderOptIn: (channel, val) =>
         set((s) => ({ reminderOptIn: { ...s.reminderOptIn, [channel]: val } })),
+
+      // ── Switch Partner ─────────────────────────────────
+      setActivePartner: (partner) => set({ activePartner: partner }),
 
       // ── Reset ──────────────────────────────────────────
       reset: () => set(createInitialState()),

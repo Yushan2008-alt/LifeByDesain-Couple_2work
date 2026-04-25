@@ -851,49 +851,68 @@ function EmotionDumpWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
 // PRD: "Free-form text entry, tagged by date, Private by default, ga share
 //       kecuali user explicit mau." — private selamanya, tidak masuk weekly share.
 // ─────────────────────────────────────────────────────────────────────────────
+const MAX_JOURNAL_CHARS = 1000
+
 function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
   const { addJournal, journals } = useMockStore(useShallow((s) => ({
     addJournal: s.addJournal,
     journals:   s.journals,
   })))
-  const [text, setText]     = useState('')
-  const [saved, setSaved]   = useState(false)
+  const [text, setText]         = useState('')
+  const [saved, setSaved]       = useState(false)
+  const [focused, setFocused]   = useState(false)
   const [expanded, setExpanded] = useState(false)
 
   const myJournals = journals
     .filter((j) => j.partner === activePartner)
     .slice()
     .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 3) // show last 3
+    .slice(0, 3)
+
+  const charCount   = text.length
+  const charPct     = charCount / MAX_JOURNAL_CHARS
+  const charColor   = charPct > 0.9 ? '#E87070' : charPct > 0.7 ? '#E8A86A' : '#7BAE7F'
+  const canSave     = text.trim().length > 0
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    if (!text.trim()) return
+    if (!canSave) return
     addJournal(text.trim(), activePartner)
     setText('')
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setFocused(false)
+    setTimeout(() => setSaved(false), 2500)
   }
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <motion.div
+      layout
+      className="card"
+      animate={{ boxShadow: focused ? '0 8px 32px rgba(107,159,212,0.18)' : '0 2px 12px rgba(200,130,100,0.07)' }}
+      transition={{ duration: 0.3 }}
+      style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+    >
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: '0.75rem',
-          background: 'rgba(107,159,212,0.12)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
+        <motion.div
+          animate={{ scale: focused ? 1.1 : 1, background: focused ? 'rgba(107,159,212,0.2)' : 'rgba(107,159,212,0.12)' }}
+          transition={{ duration: 0.25 }}
+          style={{ width: 36, height: 36, borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+        >
           <BookOpen size={16} color="#6B9FD4" />
-        </div>
+        </motion.div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             <h3 style={{ fontFamily: 'var(--font-playfair)', fontSize: '1.0625rem', fontWeight: 600, color: '#2A1810' }}>
               Jurnal Pribadi
             </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(107,159,212,0.1)', borderRadius: '2rem', padding: '0.125rem 0.5rem' }}>
+            <motion.div
+              animate={{ opacity: focused ? 1 : 0.7 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(107,159,212,0.1)', borderRadius: '2rem', padding: '0.125rem 0.5rem' }}
+            >
               <Lock size={9} color="#6B9FD4" />
               <span style={{ fontSize: '0.65rem', color: '#6B9FD4', fontWeight: 600 }}>PRIVATE</span>
-            </div>
+            </motion.div>
           </div>
           <p style={{ fontSize: '0.8rem', color: '#8B6B61', lineHeight: 1.5, marginTop: '0.125rem' }}>
             Catatan harianmu. Private selamanya — tidak pernah di-share ke pasangan.
@@ -901,10 +920,11 @@ function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
         </div>
       </div>
 
-      {/* Recent journals preview */}
+      {/* Past journals */}
       {myJournals.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <button
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             onClick={() => setExpanded((v) => !v)}
             style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: 0,
@@ -913,8 +933,8 @@ function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
             }}
           >
             <span>📖 {myJournals.length} catatan terakhir</span>
-            <span style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▾</span>
-          </button>
+            <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>▾</motion.span>
+          </motion.button>
           <AnimatePresence>
             {expanded && (
               <motion.div
@@ -923,9 +943,12 @@ function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
                 exit={{ opacity: 0, height: 0 }}
                 style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
               >
-                {myJournals.map((j) => (
-                  <div
+                {myJournals.map((j, i) => (
+                  <motion.div
                     key={j.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
                     style={{
                       background: 'rgba(107,159,212,0.05)',
                       border: '1px solid rgba(107,159,212,0.15)',
@@ -936,7 +959,7 @@ function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
                     <p style={{ fontSize: '0.8125rem', color: '#5A3E37', lineHeight: 1.6, margin: 0 }}>
                       {j.text.length > 120 ? j.text.slice(0, 120) + '…' : j.text}
                     </p>
-                  </div>
+                  </motion.div>
                 ))}
               </motion.div>
             )}
@@ -945,29 +968,71 @@ function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
       )}
 
       {/* Entry form */}
-      <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <textarea
-          className="input-warm"
-          placeholder="Tulis apapun yang ada di pikiranmu hari ini... (tidak akan pernah dibagikan)"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={3}
-          style={{ resize: 'none' }}
-        />
+      <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+        <div style={{ position: 'relative' }}>
+          <motion.div
+            animate={{ opacity: focused ? 1 : 0, scaleY: focused ? 1 : 0 }}
+            style={{
+              position: 'absolute', inset: -2, borderRadius: '0.875rem',
+              background: 'transparent',
+              border: '2px solid rgba(107,159,212,0.45)',
+              pointerEvents: 'none', zIndex: 1,
+              transformOrigin: 'center',
+            }}
+          />
+          <textarea
+            className="input-warm"
+            placeholder="Tulis apapun yang ada di pikiranmu hari ini… (tidak pernah dibagikan)"
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, MAX_JOURNAL_CHARS))}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            rows={focused ? 4 : 3}
+            style={{ resize: 'none', transition: 'rows 0.3s' }}
+          />
+        </div>
+
+        {/* Char counter — only visible when typing */}
+        <AnimatePresence>
+          {text.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <div style={{ height: 3, flex: 1, background: '#EDD5C8', borderRadius: 2, overflow: 'hidden', marginRight: '0.5rem' }}>
+                <motion.div
+                  animate={{ width: `${charPct * 100}%`, background: charColor }}
+                  transition={{ duration: 0.3 }}
+                  style={{ height: '100%', borderRadius: 2 }}
+                />
+              </div>
+              <span style={{ fontSize: '0.7rem', color: charColor, fontWeight: 600, flexShrink: 0 }}>
+                {charCount}/{MAX_JOURNAL_CHARS}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence mode="wait">
           {!saved ? (
             <motion.button
               key="save"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              whileHover={canSave ? { scale: 1.02 } : {}}
+              whileTap={canSave ? { scale: 0.97 } : {}}
               type="submit"
-              disabled={!text.trim()}
+              disabled={!canSave}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                background: 'rgba(107,159,212,0.12)',
-                border: '1.5px solid rgba(107,159,212,0.3)',
+                background: canSave ? 'rgba(107,159,212,0.12)' : 'rgba(237,213,200,0.4)',
+                border: `1.5px solid ${canSave ? 'rgba(107,159,212,0.3)' : '#EDD5C8'}`,
                 borderRadius: '0.75rem', padding: '0.625rem',
-                color: '#4A7FAA', fontWeight: 600, fontSize: '0.875rem',
-                cursor: text.trim() ? 'pointer' : 'not-allowed', opacity: text.trim() ? 1 : 0.6,
+                color: canSave ? '#4A7FAA' : '#C4A090',
+                fontWeight: 600, fontSize: '0.875rem',
+                cursor: canSave ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease',
               }}
             >
               <Lock size={13} /> Simpan (Private)
@@ -983,12 +1048,12 @@ function PrivateJournalWidget({ activePartner }: { activePartner: 'A' | 'B' }) {
                 textAlign: 'center', color: '#4A7FAA', fontWeight: 600, fontSize: '0.875rem',
               }}
             >
-              📔 Tersimpan — hanya kamu yang bisa baca ini
+              📔 Tersimpan — hanya kamu yang bisa baca ini ✨
             </motion.div>
           )}
         </AnimatePresence>
       </form>
-    </div>
+    </motion.div>
   )
 }
 
@@ -1264,7 +1329,9 @@ export default function DashboardPage() {
   const partnerB               = useMockStore((s) => s.partnerB)
   const isPremium              = useMockStore((s) => s.isPremium)
   const weeklyRitualsCompleted = useMockStore((s) => s.weeklyRitualsCompleted)
-  const [activePartner, setActivePartner] = useState<'A' | 'B'>('A')
+  // Global activePartner — synced with Nav Switch Partner toggle
+  const activePartner    = useMockStore((s) => s.activePartner)
+  const setActivePartner = useMockStore((s) => s.setActivePartner)
 
   // Redirect if not paired
   useEffect(() => {

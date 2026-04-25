@@ -21,7 +21,8 @@
       "Bash(gh api *)",
       "WebFetch(domain:api.github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(curl -s \"https://raw.githubusercontent.com/Yushan2008-alt/LifeByDesain-Couple_2work/main/product-brief-lifebydesign-couple.md\")"
+      "Bash(curl -s \"https://raw.githubusercontent.com/Yushan2008-alt/LifeByDesain-Couple_2work/main/product-brief-lifebydesign-couple.md\")",
+      "Bash(npx next *)"
     ]
   }
 }
