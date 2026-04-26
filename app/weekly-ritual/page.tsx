@@ -630,12 +630,13 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
               <button
                 key={p} type="button" onClick={() => setNewPart(p)}
                 style={{
-                  flex: 1, padding: '0.5rem',
+                  flex: 1, minHeight: 48,
                   background: newPart === p ? (p === 'A' ? 'rgba(232,132,106,0.12)' : 'rgba(123,174,127,0.12)') : '#FFF8F5',
                   border: `1.5px solid ${newPart === p ? (p === 'A' ? 'rgba(232,132,106,0.4)' : 'rgba(123,174,127,0.4)') : '#EDD5C8'}`,
-                  borderRadius: '0.625rem', fontSize: '0.8rem',
+                  borderRadius: '0.75rem', fontSize: '0.875rem',
                   color: newPart === p ? (p === 'A' ? '#E8846A' : '#3D7A43') : '#8B6B61',
                   cursor: 'pointer', fontWeight: newPart === p ? 700 : 500,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
                 {(p === 'A' ? partnerA.name : partnerB.name) || `Partner ${p}`}
@@ -649,7 +650,7 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
               value={newRaw}
               onChange={(e) => setNewRaw(e.target.value)}
               rows={3}
-              style={{ resize: 'none', paddingBottom: '2.25rem' }}
+              style={{ resize: 'none', paddingBottom: '3rem' }}
             />
             <button
               type="button"
@@ -657,15 +658,14 @@ function Step2EmotionTranslation({ onNext }: { onNext: () => void }) {
                 analytics.templateLibraryOpened('Semua')
                 setShowTemplateLib2(true)
               }}
+              className="btn-sm"
               style={{
-                position: 'absolute', bottom: '0.5rem', right: '0.625rem',
-                display: 'flex', alignItems: 'center', gap: '0.3rem',
+                position: 'absolute', bottom: '0.625rem', right: '0.625rem',
                 background: 'rgba(232,132,106,0.1)', border: '1px solid rgba(232,132,106,0.25)',
-                borderRadius: '0.5rem', padding: '0.25rem 0.625rem',
-                fontSize: '0.72rem', color: '#E8846A', fontWeight: 600, cursor: 'pointer',
+                color: '#E8846A',
               }}
             >
-              <BookOpen size={11} /> Pakai Template
+              <BookOpen size={13} /> Pakai Template
             </button>
           </div>
           <button type="submit" className="btn-secondary" disabled={!newRaw.trim()} style={{ justifyContent: 'center' }}>
@@ -823,10 +823,10 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
               key={tab}
               onClick={() => setActiveTabA(tab)}
               style={{
-                flex: 1, padding: '0.5rem 0.25rem',
+                flex: 1, padding: '0.625rem 0.25rem', minHeight: 44,
                 background: activeTabA === tab ? 'white' : 'transparent',
                 border: 'none', borderRadius: '0.5rem',
-                fontSize: '0.75rem', fontWeight: activeTabA === tab ? 700 : 500,
+                fontSize: '0.8125rem', fontWeight: activeTabA === tab ? 700 : 500,
                 color: activeTabA === tab ? '#E8846A' : '#8B6B61',
                 cursor: 'pointer',
                 boxShadow: activeTabA === tab ? '0 1px 4px rgba(200,130,100,0.15)' : 'none',
@@ -881,10 +881,10 @@ function Step3Scoring({ onNext }: { onNext: () => void }) {
               key={tab}
               onClick={() => setActiveTabB(tab)}
               style={{
-                flex: 1, padding: '0.5rem 0.25rem',
+                flex: 1, padding: '0.625rem 0.25rem', minHeight: 44,
                 background: activeTabB === tab ? 'white' : 'transparent',
                 border: 'none', borderRadius: '0.5rem',
-                fontSize: '0.75rem', fontWeight: activeTabB === tab ? 700 : 500,
+                fontSize: '0.8125rem', fontWeight: activeTabB === tab ? 700 : 500,
                 color: activeTabB === tab ? '#7BAE7F' : '#8B6B61',
                 cursor: 'pointer',
                 boxShadow: activeTabB === tab ? '0 1px 4px rgba(90,150,96,0.15)' : 'none',
@@ -1249,12 +1249,13 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {(['relationship', 'individual'] as const).map((t) => (
                   <button key={t} type="button" onClick={() => setWinType(t)} style={{
-                    flex: 1, padding: '0.5rem',
+                    flex: 1, minHeight: 48,
                     background: winType === t ? (t === 'relationship' ? 'rgba(232,132,106,0.1)' : 'rgba(123,174,127,0.1)') : '#FFF8F5',
                     border: `1.5px solid ${winType === t ? (t === 'relationship' ? 'rgba(232,132,106,0.4)' : 'rgba(123,174,127,0.4)') : '#EDD5C8'}`,
-                    borderRadius: '0.625rem', fontSize: '0.8rem',
+                    borderRadius: '0.75rem', fontSize: '0.9rem',
                     color: winType === t ? (t === 'relationship' ? '#E8846A' : '#3D7A43') : '#8B6B61',
                     cursor: 'pointer', fontWeight: winType === t ? 700 : 500,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {t === 'relationship' ? '❤️ Berdua' : '⭐ Personal'}
                   </button>
@@ -1264,12 +1265,13 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   {(['A', 'B'] as const).map((p) => (
                     <button key={p} type="button" onClick={() => setWinPartner(p)} style={{
-                      flex: 1, padding: '0.375rem',
+                      flex: 1, minHeight: 44,
                       background: winPartner === p ? (p === 'A' ? 'rgba(232,132,106,0.1)' : 'rgba(123,174,127,0.1)') : 'transparent',
                       border: `1px solid ${winPartner === p ? (p === 'A' ? 'rgba(232,132,106,0.35)' : 'rgba(123,174,127,0.35)') : '#EDD5C8'}`,
-                      borderRadius: '0.5rem', fontSize: '0.75rem',
+                      borderRadius: '0.75rem', fontSize: '0.875rem',
                       color: winPartner === p ? (p === 'A' ? '#E8846A' : '#3D7A43') : '#8B6B61',
                       cursor: 'pointer', fontWeight: winPartner === p ? 600 : 400,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {getName(p)}
                     </button>
@@ -1367,12 +1369,13 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
               {(['both', 'A', 'B'] as const).map((p) => (
                 <button key={p} type="button" onClick={() => setCommitPartner(p)}
                   style={{
-                    flex: 1, padding: '0.375rem 0.25rem',
+                    flex: 1, minHeight: 44,
                     background: commitPartner === p ? 'rgba(123,174,127,0.12)' : 'transparent',
                     border: `1px solid ${commitPartner === p ? 'rgba(123,174,127,0.35)' : '#EDD5C8'}`,
-                    borderRadius: '0.5rem', fontSize: '0.72rem',
+                    borderRadius: '0.75rem', fontSize: '0.8125rem',
                     color: commitPartner === p ? '#3D7A43' : '#8B6B61',
                     cursor: 'pointer', fontWeight: commitPartner === p ? 600 : 400,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}
                 >
                   {p === 'both' ? '👥 Berdua' : `👤 ${getName(p)}`}
@@ -1380,10 +1383,10 @@ function Step4Wins({ onFinish }: { onFinish: () => void }) {
               ))}
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button type="button" onClick={() => setShowCommitForm(false)} className="btn-secondary" style={{ flex: 1, justifyContent: 'center', padding: '0.5rem' }}>
+              <button type="button" onClick={() => setShowCommitForm(false)} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
                 Batal
               </button>
-              <button type="submit" className="btn-primary" disabled={!commitText.trim()} style={{ flex: 2, justifyContent: 'center', padding: '0.5rem' }}>
+              <button type="submit" className="btn-primary" disabled={!commitText.trim()} style={{ flex: 2, justifyContent: 'center' }}>
                 Tambahkan
               </button>
             </div>

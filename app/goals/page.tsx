@@ -145,16 +145,16 @@ function GoalCard({ goal, partnerAName, partnerBName }: {
           <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
             <button
               onClick={() => setExpanded((v) => !v)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4A090', padding: '0.25rem' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4A090', padding: '0.5rem', minWidth: 36, minHeight: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
             {!goal.completed && (
               <button
                 onClick={() => deleteGoal(goal.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4A090', padding: '0.25rem' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4A090', padding: '0.5rem', minWidth: 36, minHeight: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Trash2 size={14} />
+                <Trash2 size={15} />
               </button>
             )}
           </div>
@@ -406,13 +406,12 @@ function AddGoalModal({ onClose }: { onClose: () => void }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
               {(Object.entries(CATEGORY_CONFIG) as [GoalCategory, typeof CATEGORY_CONFIG[GoalCategory]][]).map(([key, cfg]) => (
                 <button key={key} type="button" onClick={() => setCategory(key)}
+                  className="btn-chip"
                   style={{
-                    padding: '0.3rem 0.75rem', borderRadius: '2rem', fontSize: '0.8rem',
                     fontWeight: category === key ? 700 : 500,
                     border: category === key ? `2px solid ${cfg.color}` : '1.5px solid #EDD5C8',
                     background: category === key ? cfg.bg : 'white',
                     color: category === key ? cfg.color : '#8B6B61',
-                    cursor: 'pointer',
                   }}
                 >
                   {cfg.emoji} {cfg.label}

@@ -175,23 +175,19 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
         })}
       </div>
 
-      {/* Emoji grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.375rem' }}>
+      {/* Emoji grid — 6 cols desktop, 4 cols <380px */}
+      <div className="grid-emoji-6">
         {MOOD_OPTIONS.map(({ emoji, label }) => (
           <motion.button
             key={emoji}
             whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.88 }}
             onClick={() => { setSelected(emoji); setIntensity(MOOD_OPTIONS.find(m => m.emoji === emoji)?.intensity ?? 3) }}
             title={label}
+            className="btn-emoji"
             style={{
               background: selected === emoji ? 'rgba(232,132,106,0.15)' : 'transparent',
-              border: selected === emoji ? '2px solid rgba(232,132,106,0.5)' : '2px solid transparent',
-              borderRadius: '0.625rem',
-              padding: '0.5rem',
-              fontSize: '1.25rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              borderColor: selected === emoji ? 'rgba(232,132,106,0.5)' : 'transparent',
             }}
           >
             {emoji}
@@ -221,21 +217,17 @@ function MoodTracker({ activePartner }: { activePartner: 'A' | 'B' }) {
             <Tag size={12} color="#C4A090" />
             <span style={{ fontSize: '0.8rem', color: '#8B6B61' }}>Tag (opsional)</span>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+          <div className="chip-row">
             {TAG_OPTIONS.map((tag) => (
               <button
                 key={tag}
                 onClick={() => toggleTag(tag)}
+                className="btn-chip"
                 style={{
                   background: tags.includes(tag) ? 'rgba(232,132,106,0.12)' : '#FFF8F5',
                   border: tags.includes(tag) ? '1.5px solid rgba(232,132,106,0.4)' : '1.5px solid #EDD5C8',
-                  borderRadius: '2rem',
-                  padding: '0.25rem 0.75rem',
-                  fontSize: '0.75rem',
                   color: tags.includes(tag) ? '#E8846A' : '#8B6B61',
-                  cursor: 'pointer',
                   fontWeight: tags.includes(tag) ? 600 : 400,
-                  transition: 'all 0.15s ease',
                 }}
               >
                 {TAG_LABELS[tag]}
@@ -330,16 +322,14 @@ function HabitChecklist({ activePartner }: { activePartner: 'A' | 'B' }) {
         </h3>
         <button
           onClick={() => { setEditMode((v) => !v); setShowAddForm(false) }}
+          className="btn-sm"
           style={{
-            display: 'flex', alignItems: 'center', gap: '0.3rem',
             background: editMode ? 'rgba(232,132,106,0.12)' : 'transparent',
             border: editMode ? '1px solid rgba(232,132,106,0.3)' : '1px solid #EDD5C8',
-            borderRadius: '0.625rem', padding: '0.3rem 0.625rem',
-            fontSize: '0.75rem', color: editMode ? '#E8846A' : '#8B6B61',
-            cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s',
+            color: editMode ? '#E8846A' : '#8B6B61',
           }}
         >
-          <Pencil size={11} />
+          <Pencil size={13} />
           {editMode ? 'Selesai' : 'Edit'}
         </button>
       </div>
@@ -448,16 +438,8 @@ function HabitChecklist({ activePartner }: { activePartner: 'A' | 'B' }) {
                   <Link href="/pricing" style={{ color: '#E8846A', fontWeight: 600, textDecoration: 'none' }}>Upgrade Premium</Link>
                 </div>
               ) : (
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
-                    background: 'rgba(232,132,106,0.07)', border: '1.5px dashed rgba(232,132,106,0.35)',
-                    borderRadius: '0.875rem', padding: '0.625rem',
-                    color: '#E8846A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
-                  }}
-                >
-                  <Plus size={14} /> Tambah Habit Baru
+                <button onClick={() => setShowAddForm(true)} className="btn-dashed">
+                  <Plus size={15} /> Tambah Habit Baru
                 </button>
               )
             ) : (
@@ -467,11 +449,11 @@ function HabitChecklist({ activePartner }: { activePartner: 'A' | 'B' }) {
                   {HABIT_EMOJIS.map((e) => (
                     <button
                       key={e} type="button" onClick={() => setNewIcon(e)}
+                      className="btn-emoji"
                       style={{
-                        width: 34, height: 34, borderRadius: '0.5rem', fontSize: '1rem',
-                        border: newIcon === e ? '2px solid #E8846A' : '1.5px solid #EDD5C8',
+                        borderColor: newIcon === e ? '#E8846A' : '#EDD5C8',
                         background: newIcon === e ? 'rgba(232,132,106,0.12)' : 'white',
-                        cursor: 'pointer', transition: 'all 0.15s',
+                        fontSize: '1.125rem',
                       }}
                     >
                       {e}
@@ -555,16 +537,14 @@ function SharedTodoList({ activePartner }: { activePartner: 'A' | 'B' }) {
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowForm((v) => !v)}
+          className="btn-sm"
           style={{
             background: showForm ? 'rgba(237,213,200,0.6)' : '#E8846A',
             color: showForm ? '#8B6B61' : 'white',
-            border: 'none', borderRadius: '0.625rem',
-            padding: '0.375rem 0.75rem', fontSize: '0.8rem',
-            display: 'flex', alignItems: 'center', gap: '0.25rem',
-            cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s',
+            border: 'none',
           }}
         >
-          <Plus size={13} />{showForm ? 'Batal' : 'Tambah'}
+          <Plus size={14} />{showForm ? 'Batal' : 'Tambah'}
         </motion.button>
       </div>
 
@@ -585,7 +565,7 @@ function SharedTodoList({ activePartner }: { activePartner: 'A' | 'B' }) {
               onChange={(e) => setText(e.target.value)}
               autoFocus
             />
-            <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+            <div className="chip-row">
               {(Object.keys(CATEGORY_LABELS) as TodoCategory[]).map((cat) => {
                 const cfg = CATEGORY_CONFIG[cat]
                 return (
@@ -593,14 +573,12 @@ function SharedTodoList({ activePartner }: { activePartner: 'A' | 'B' }) {
                     key={cat}
                     type="button"
                     onClick={() => setCategory(cat)}
+                    className="btn-chip"
                     style={{
                       background: category === cat ? cfg.bg : 'transparent',
                       border: `1.5px solid ${category === cat ? cfg.color : '#EDD5C8'}`,
-                      borderRadius: '2rem',
-                      padding: '0.2rem 0.625rem',
-                      fontSize: '0.75rem',
                       color: category === cat ? cfg.color : '#8B6B61',
-                      cursor: 'pointer', fontWeight: category === cat ? 600 : 400,
+                      fontWeight: category === cat ? 600 : 400,
                     }}
                   >
                     {cfg.label}
@@ -608,7 +586,7 @@ function SharedTodoList({ activePartner }: { activePartner: 'A' | 'B' }) {
                 )
               })}
             </div>
-            <button type="submit" className="btn-primary" style={{ justifyContent: 'center', padding: '0.625rem' }}>
+            <button type="submit" className="btn-primary" style={{ justifyContent: 'center' }}>
               Tambahkan
             </button>
           </motion.form>
@@ -638,8 +616,8 @@ function SharedTodoList({ activePartner }: { activePartner: 'A' | 'B' }) {
                   border: '1px solid #EDD5C8',
                 }}
               >
-                <button onClick={() => toggleTodo(todo.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
-                  <Circle size={16} color="#C4A090" />
+                <button onClick={() => toggleTodo(todo.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', minWidth: 36, minHeight: 36, alignItems: 'center', justifyContent: 'center' }}>
+                  <Circle size={18} color="#C4A090" />
                 </button>
                 <span style={{ flex: 1, fontSize: '0.875rem', color: '#2A1810' }}>{todo.text}</span>
                 <span
@@ -651,11 +629,11 @@ function SharedTodoList({ activePartner }: { activePartner: 'A' | 'B' }) {
                 <span style={{ fontSize: '0.7rem', color: '#C4A090' }}>{todo.createdBy}</span>
                 <button
                   onClick={() => deleteTodo(todo.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', opacity: 0.5 }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem', display: 'flex', minWidth: 36, minHeight: 36, alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}
                   onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
                   onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5' }}
                 >
-                  <Trash2 size={13} color="#E87070" />
+                  <Trash2 size={15} color="#E87070" />
                 </button>
               </motion.div>
             )

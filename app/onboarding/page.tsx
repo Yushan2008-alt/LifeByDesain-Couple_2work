@@ -222,23 +222,15 @@ function Step2Invite({ onNext }: { onNext: () => void }) {
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={handleCopy}
+          className="btn-sm"
           style={{
             background: copied ? '#7BAE7F' : '#E8846A',
             color: 'white',
             border: 'none',
-            borderRadius: '0.5rem',
-            padding: '0.375rem 0.75rem',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem',
-            transition: 'background 0.2s',
             flexShrink: 0,
           }}
         >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
+          {copied ? <Check size={14} /> : <Copy size={14} />}
           {copied ? 'Tersalin!' : 'Salin'}
         </motion.button>
       </div>
@@ -315,16 +307,14 @@ function Step3PartnerB({ onNext }: { onNext: () => void }) {
       <motion.button
         whileTap={{ scale: 0.96 }}
         onClick={handleAutoFill}
+        className="btn-sm"
         style={{
           background: 'rgba(123,174,127,0.12)',
           border: '1px solid rgba(123,174,127,0.3)',
-          borderRadius: '0.625rem',
-          padding: '0.375rem 0.875rem',
-          fontSize: '0.8rem',
           color: '#5A9660',
-          cursor: 'pointer',
           marginBottom: '1.75rem',
-          fontWeight: 500,
+          width: '100%',
+          justifyContent: 'center',
         }}
       >
         ✦ Auto-fill token (testing shortcut)

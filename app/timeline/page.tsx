@@ -268,12 +268,10 @@ export default function TimelinePage() {
           </div>
           <button
             onClick={() => setShowFilter((v) => !v)}
+            className="btn-sm"
             style={{
-              display: 'flex', alignItems: 'center', gap: '0.375rem',
               background: showFilter ? 'rgba(232,132,106,0.12)' : 'white',
-              border: '1.5px solid #EDD5C8', borderRadius: '0.75rem',
-              padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: '#8B6B61',
-              cursor: 'pointer', fontWeight: 600,
+              border: '1.5px solid #EDD5C8', color: '#8B6B61',
             }}
           >
             <Filter size={13} /> Filter
@@ -303,17 +301,16 @@ export default function TimelinePage() {
             <div style={{ background: 'white', borderRadius: '1rem', padding: '0.875rem', border: '1px solid rgba(237,213,200,0.6)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {/* Type filter */}
               <div>
-                <div style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>Tipe</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                <div style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Tipe</div>
+                <div className="chip-row">
                   {(['all', 'mood', 'journal', 'emotion', 'win', 'goal'] as const).map((t) => (
                     <button key={t} onClick={() => setFilterType(t)}
+                      className="btn-chip"
                       style={{
-                        padding: '0.25rem 0.625rem', borderRadius: '2rem', fontSize: '0.75rem',
                         fontWeight: filterType === t ? 700 : 500,
                         border: filterType === t ? `2px solid ${t === 'all' ? '#E8846A' : TYPE_CONFIG[t as EntryType]?.color ?? '#E8846A'}` : '1.5px solid #EDD5C8',
                         background: filterType === t ? (t === 'all' ? 'rgba(232,132,106,0.1)' : TYPE_CONFIG[t as EntryType]?.bg ?? 'transparent') : 'white',
                         color: filterType === t ? (t === 'all' ? '#E8846A' : TYPE_CONFIG[t as EntryType]?.color ?? '#E8846A') : '#8B6B61',
-                        cursor: 'pointer',
                       }}
                     >{t === 'all' ? 'Semua' : TYPE_CONFIG[t as EntryType].label}</button>
                   ))}
@@ -321,17 +318,16 @@ export default function TimelinePage() {
               </div>
               {/* Date range filter */}
               <div>
-                <div style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>Rentang Waktu</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                <div style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Rentang Waktu</div>
+                <div className="chip-row">
                   {DATE_RANGES.map(({ value, label }) => (
                     <button key={value} onClick={() => setFilterRange(value)}
+                      className="btn-chip"
                       style={{
-                        padding: '0.25rem 0.625rem', borderRadius: '2rem', fontSize: '0.75rem',
                         fontWeight: filterRange === value ? 700 : 500,
                         border: filterRange === value ? '2px solid #6B9FD4' : '1.5px solid #EDD5C8',
                         background: filterRange === value ? 'rgba(107,159,212,0.1)' : 'white',
                         color: filterRange === value ? '#6B9FD4' : '#8B6B61',
-                        cursor: 'pointer',
                       }}
                     >{label}</button>
                   ))}
@@ -340,17 +336,16 @@ export default function TimelinePage() {
 
               {/* Partner filter */}
               <div>
-                <div style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>Partner</div>
-                <div style={{ display: 'flex', gap: '0.375rem' }}>
+                <div style={{ fontSize: '0.7rem', color: '#C4A090', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Partner</div>
+                <div className="chip-row">
                   {([['all', 'Semua'], ['A', partnerA.name || 'Partner A'], ['B', partnerB.name || 'Partner B']] as const).map(([val, label]) => (
                     <button key={val} onClick={() => setFilterPartner(val as 'all' | 'A' | 'B')}
+                      className="btn-chip"
                       style={{
-                        padding: '0.25rem 0.75rem', borderRadius: '2rem', fontSize: '0.75rem',
                         fontWeight: filterPartner === val ? 700 : 500,
                         border: filterPartner === val ? '2px solid #E8846A' : '1.5px solid #EDD5C8',
                         background: filterPartner === val ? 'rgba(232,132,106,0.1)' : 'white',
                         color: filterPartner === val ? '#E8846A' : '#8B6B61',
-                        cursor: 'pointer',
                       }}
                     >{label}</button>
                   ))}
